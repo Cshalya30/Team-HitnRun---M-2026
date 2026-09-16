@@ -21,7 +21,7 @@ export const App: React.FC = () => {
   const { state: urlState, setWeek, setBorrowerId, setScenario, setSeed } = useUrlState({
     seed: 481516,
     week: 12,
-    borrowerId: 'b-001',
+    borrowerId: '', // Default to empty per Part 4.4 empty state rule
     scenario: 'baseline',
   });
 
@@ -30,12 +30,15 @@ export const App: React.FC = () => {
   const [activeIntervention, setActiveIntervention] = useState<Intervention | null>(null);
   const [isInterventionModalOpen, setIsInterventionModalOpen] = useState(false);
   const [selectedWardId, setSelectedWardId] = useState<string | null>(null);
-  const [bottomView, setBottomView] = useState<'matrix' | 'table' | 'closed'>('matrix');
+  const [bottomTab, setBottomTab] = useState<'matrix' | 'table'>('matrix');
+  const [isTableExpanded, setIsTableExpanded] = useState(false);
 
+  // Portfolio generation
   const portfolio = useMemo(() => {
     return generateSyntheticPortfolio(urlState.seed);
   }, [urlState.seed]);
 
+  // Contagion simulation
   const simulation = useMemo(() => {
     return simulatePortfolioContagion(
       portfolio.wards,
@@ -52,7 +55,7 @@ export const App: React.FC = () => {
     );
   }, [portfolio, activeShock, activeIntervention]);
 
-  // Compute 78-week average portfolio stress for Timeline Sequencer Histogram
+  // Compute 78-week average portfolio stress for Timeline Sequencer
   const weeklyStressScores = useMemo(() => {
     return Array.from({ length: 78 }).map((_, wIdx) => {
       const snaps = simulation.snapshotsByWeek[wIdx] || [];
@@ -83,7 +86,8 @@ export const App: React.FC = () => {
   }, [simulation, urlState.week]);
 
   const selectedBorrower = useMemo(() => {
-    return portfolio.borrowers.find(b => b.id === urlState.borrowerId) || portfolio.borrowers[0] || null;
+    if (!urlState.borrowerId) return null;
+    return portfolio.borrowers.find(b => b.id === urlState.borrowerId) || null;
   }, [portfolio.borrowers, urlState.borrowerId]);
 
   const selectedSnapshot = useMemo(() => {
@@ -106,7 +110,28 @@ export const App: React.FC = () => {
     return portfolio.wards.find(w => w.id === selectedBorrower.wardId) || null;
   }, [portfolio.wards, selectedBorrower]);
 
-  // Keyboard shortcut listener: Space to toggle play/pause
+  // Scenario handlers
+  const handleApplyShock = (shock: Shock) => {
+    setActiveShock(shock);
+    setScenario(shock.type);
+    if (shock.type === 'borrower') {
+      setBorrowerId(shock.targetId);
+    }
+  };
+
+  const handleClearShock = () => {
+    setActiveShock(null);
+    setActiveIntervention(null);
+    setScenario('baseline');
+  };
+
+  const handleApplyPolicyPreset = () => {
+    const policyShock = createPolicyRefinancingCutoffShock(urlState.week);
+    setActiveShock(policyShock);
+    setScenario('policy_cutoff');
+  };
+
+  // Keyboard shortcut listener for spacebar transport
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
@@ -121,97 +146,77 @@ export const App: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const handleApplyShock = (shock: Shock) => {
-    setActiveShock(shock);
-    setScenario(shock.type);
-    setBorrowerId(shock.type === 'borrower' ? shock.targetId : urlState.borrowerId);
-  };
-
-  const handleClearShock = () => {
-    setActiveShock(null);
-    setActiveIntervention(null);
-    setScenario('baseline');
-  };
-
-  const handleApplyPolicyPreset = () => {
-    const policyShock = createPolicyRefinancingCutoffShock(urlState.week);
-    setActiveShock(policyShock);
-    setScenario('policy_cutoff');
-    setBorrowerId('b-001');
-  };
-
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100vh',
-        width: '100vw',
-        backgroundColor: 'var(--bg-app)',
-        overflow: 'hidden',
-      }}
-    >
-      {/* Top Cockpit Navigation Bar */}
+    <div className="cockpit-container">
+      {/* 1. TOP BAR (56px, sticky header z-index 20) */}
       <header
         style={{
+          height: '56px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '10px 20px',
-          backgroundColor: 'rgba(14, 16, 23, 0.95)',
-          borderBottom: '1px solid var(--border-subtle)',
-          backdropFilter: 'blur(20px)',
-          zIndex: 40,
+          padding: '0 var(--space-24)',
+          backgroundColor: 'var(--surface-0)',
+          borderBottom: '1px solid var(--hairline)',
+          zIndex: 'var(--z-sticky)' as any,
           flexShrink: 0,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--color-signal)', display: 'inline-block', boxShadow: '0 0 8px rgba(16, 185, 129, 0.6)' }} />
-            <span style={{ fontSize: '15px', fontWeight: 700, letterSpacing: '-0.02em', color: '#fff' }}>
+        {/* Left: Wordmark · Breadcrumb · Plain-text Portfolio Meta */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-16)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-8)' }}>
+            <span
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '16px',
+                fontWeight: 700,
+                letterSpacing: '-0.02em',
+                color: 'var(--ink-0)',
+              }}
+            >
               TREMOR
             </span>
-            <span style={{ color: 'var(--text-muted)' }}>/</span>
-            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+            <span style={{ color: 'var(--hairline)' }}>/</span>
+            <span style={{ fontSize: '12px', color: 'var(--ink-1)' }}>
               Group-Contagion Diagnostic
             </span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', color: 'var(--text-muted)' }}>
+          <div
+            style={{
+              fontSize: '11px',
+              color: 'var(--ink-2)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-8)',
+            }}
+          >
             <span>Mumbai Central & Suburban</span>
-            <span>•</span>
-            <span className="font-mono-num">{portfolio.wards.length} Wards · {portfolio.centres.length} Centres · {portfolio.borrowers.length} Borrowers</span>
+            <span>·</span>
+            <span>4 wards · 24 centres · 425 borrowers</span>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        {/* Right: PROC SEED · Evidence Export Slide-over Trigger */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-16)' }}>
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
+              gap: 'var(--space-6)',
               fontSize: '11px',
-              color: 'var(--text-muted)',
-              backgroundColor: 'rgba(255, 255, 255, 0.03)',
-              padding: '2px 8px',
-              borderRadius: '4px',
-              border: '1px solid var(--border-subtle)',
+              fontFamily: 'var(--font-mono)',
+              color: 'var(--ink-2)',
             }}
           >
-            <span>RNG SEED</span>
-            <span className="font-mono-num" style={{ color: '#fff', fontWeight: 600 }}>
+            <span>PROC SEED</span>
+            <span className="tabular-num" style={{ color: 'var(--ink-0)', fontWeight: 500 }}>
               {urlState.seed}
             </span>
             <button
               onClick={() => setSeed(urlState.seed === 481516 ? 928374 : 481516)}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: 'var(--text-secondary)',
-                cursor: 'pointer',
-                fontSize: '11px',
-                padding: '0 2px',
-              }}
+              className="btn-ghost"
+              style={{ padding: '0 4px', height: '22px', fontSize: '11px' }}
               title="Cycle deterministic seed"
             >
               ⇄
@@ -230,7 +235,7 @@ export const App: React.FC = () => {
         </div>
       </header>
 
-      {/* 78-Week Stress Volume Histogram Sequencer */}
+      {/* 2. SCRUBBER (64px, z-index 20) */}
       <TimelineSequencer
         currentWeek={urlState.week}
         totalWeeks={78}
@@ -242,20 +247,19 @@ export const App: React.FC = () => {
         weeklyStressScores={weeklyStressScores}
       />
 
-      {/* Primary Split View: 62% Network Canvas / 38% Attribution Dossier */}
-      <div
-        style={{
-          flex: 1,
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 62%) minmax(0, 38%)',
-          gap: '12px',
-          padding: '12px 16px',
-          overflow: 'hidden',
-          minHeight: 0,
-        }}
-      >
-        {/* Left Column: Network Canvas + Scenario Injections */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', height: '100%', minHeight: 0 }}>
+      {/* 3. MAIN COCKPIT: Asymmetric 62% (Graph) / 38% (Attribution Rail) Split */}
+      <main className="cockpit-main">
+        {/* Left Column: Contagion Graph Canvas + Scenario Chips (44px) */}
+        <section
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 'var(--space-12)',
+            height: '100%',
+            minHeight: 0,
+          }}
+          aria-label="Contagion Network Visualization"
+        >
           <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
             <CanvasGraph
               wards={portfolio.wards}
@@ -264,12 +268,13 @@ export const App: React.FC = () => {
               borrowers={portfolio.borrowers}
               edges={portfolio.edges}
               currentWeekSnapshots={currentWeekSnapshots}
-              selectedBorrowerId={urlState.borrowerId}
+              selectedBorrowerId={urlState.borrowerId || null}
               onSelectBorrower={id => setBorrowerId(id)}
               cascadeOriginBorrowerId={activeShock?.type === 'borrower' ? activeShock.targetId : 'b-001'}
             />
           </div>
 
+          {/* 4. SCENARIO INJECTION CHIPS (44px) */}
           <ScenarioDrawer
             wards={portfolio.wards}
             officers={portfolio.officers}
@@ -279,10 +284,18 @@ export const App: React.FC = () => {
             onClearShock={handleClearShock}
             onApplyPolicyPreset={handleApplyPolicyPreset}
           />
-        </div>
+        </section>
 
-        {/* Right Column: Three-Way Causal Attribution Dossier */}
-        <div style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        {/* Right Column: Borrower Detail Rail (38% width) */}
+        <section
+          style={{
+            height: '100%',
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+          aria-label="Borrower Attribution Dossier"
+        >
           <AttributionDossier
             borrower={selectedBorrower}
             centre={selectedCentre}
@@ -293,51 +306,98 @@ export const App: React.FC = () => {
             onSelectBorrowerId={id => setBorrowerId(id)}
             onOpenInterventionModal={() => setIsInterventionModalOpen(true)}
           />
-        </div>
-      </div>
+        </section>
+      </main>
 
-      {/* Bottom Collapsible Ledger & Exposure Tray Bar */}
+      {/* 5. TABS & COLLAPSIBLE DATA TABLE DRAWER (36px Tab bar, variable drawer) */}
       <footer
         style={{
           flexShrink: 0,
-          borderTop: '1px solid var(--border-subtle)',
-          backgroundColor: 'var(--bg-surface)',
-          zIndex: 30,
+          borderTop: '1px solid var(--hairline)',
+          backgroundColor: 'var(--surface-0)',
+          zIndex: 'var(--z-panel)' as any,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 16px' }}>
-          <div style={{ display: 'flex', gap: '6px' }}>
+        {/* 36px Tab Bar */}
+        <div
+          style={{
+            height: '36px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0 var(--space-24)',
+          }}
+        >
+          <div style={{ display: 'flex', gap: 'var(--space-8)' }}>
             <button
-              className={`btn-action ${bottomView === 'matrix' ? 'active' : ''}`}
-              onClick={() => setBottomView(bottomView === 'matrix' ? 'closed' : 'matrix')}
-              style={{ fontSize: '11px', height: '24px' }}
+              className={`btn-secondary ${isTableExpanded && bottomTab === 'matrix' ? 'active' : ''}`}
+              onClick={() => {
+                if (isTableExpanded && bottomTab === 'matrix') {
+                  setIsTableExpanded(false);
+                } else {
+                  setBottomTab('matrix');
+                  setIsTableExpanded(true);
+                }
+              }}
+              style={{
+                height: '26px',
+                fontSize: '11px',
+                fontFamily: 'var(--font-mono)',
+                borderColor: isTableExpanded && bottomTab === 'matrix' ? 'var(--ink-0)' : 'var(--hairline)',
+                color: isTableExpanded && bottomTab === 'matrix' ? 'var(--ink-0)' : 'var(--ink-1)',
+              }}
             >
-              Ward Exposure Matrix (F12)
+              Ward Exposure Matrix
             </button>
             <button
-              className={`btn-action ${bottomView === 'table' ? 'active' : ''}`}
-              onClick={() => setBottomView(bottomView === 'table' ? 'closed' : 'table')}
-              style={{ fontSize: '11px', height: '24px' }}
+              className={`btn-secondary ${isTableExpanded && bottomTab === 'table' ? 'active' : ''}`}
+              onClick={() => {
+                if (isTableExpanded && bottomTab === 'table') {
+                  setIsTableExpanded(false);
+                } else {
+                  setBottomTab('table');
+                  setIsTableExpanded(true);
+                }
+              }}
+              style={{
+                height: '26px',
+                fontSize: '11px',
+                fontFamily: 'var(--font-mono)',
+                borderColor: isTableExpanded && bottomTab === 'table' ? 'var(--ink-0)' : 'var(--hairline)',
+                color: isTableExpanded && bottomTab === 'table' ? 'var(--ink-0)' : 'var(--ink-1)',
+              }}
             >
               Borrower Ledger Table
             </button>
           </div>
 
-          {bottomView !== 'closed' && (
+          {isTableExpanded && (
             <button
-              onClick={() => setBottomView('closed')}
-              className="btn-action"
-              style={{ fontSize: '10px', height: '22px', border: 'none', background: 'none', color: 'var(--text-muted)' }}
+              onClick={() => setIsTableExpanded(false)}
+              className="btn-ghost"
+              style={{
+                fontSize: '11px',
+                height: '24px',
+                color: 'var(--ink-2)',
+              }}
+              title="Collapse bottom table drawer"
             >
               Collapse ✕
             </button>
           )}
         </div>
 
-        {/* Expanded Drawer Surface */}
-        {bottomView !== 'closed' && (
-          <div style={{ maxHeight: '240px', overflowY: 'auto', borderTop: '1px solid var(--border-subtle)' }}>
-            {bottomView === 'matrix' ? (
+        {/* Expandable Table Container */}
+        {isTableExpanded && (
+          <div
+            style={{
+              maxHeight: '260px',
+              overflowY: 'auto',
+              borderTop: '1px solid var(--hairline)',
+              backgroundColor: 'var(--surface-1)',
+            }}
+          >
+            {bottomTab === 'matrix' ? (
               <WardHeatMatrix
                 wardAggregates={currentWardAggregates}
                 selectedWardId={selectedWardId}
@@ -358,7 +418,7 @@ export const App: React.FC = () => {
         )}
       </footer>
 
-      {/* Intervention Trajectory Simulator Modal */}
+      {/* 6. MODAL: Intervention Trajectory Simulator (z-index 60) */}
       {isInterventionModalOpen && selectedBorrower && (
         <InterventionSimulator
           wards={portfolio.wards}

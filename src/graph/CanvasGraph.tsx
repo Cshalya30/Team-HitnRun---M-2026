@@ -18,6 +18,10 @@ interface CanvasGraphProps {
   selectedBorrowerId: string | null;
   onSelectBorrower: (id: string) => void;
   cascadeOriginBorrowerId: string | null;
+  isLoading?: boolean;
+  hasError?: boolean;
+  emptyFilterMessage?: string | null;
+  onClearFilter?: () => void;
 }
 
 interface NodeLayout {
@@ -36,12 +40,14 @@ interface ClusterHull {
   radius: number;
 }
 
-const COLOR_IDIO = '#E5B85C';
-const COLOR_INDUCED = '#F43F5E';
-const COLOR_COVARIATE = '#38BDF8';
-const COLOR_SIGNAL = '#10B981';
-const COLOR_BASE = '#191C26';
-const COLOR_SELECTION = '#FFFFFF';
+const COLOR_IDIO = '#E8C468';
+const COLOR_INDUCED = '#E05A6B';
+const COLOR_COVARIATE = '#4FA8D8';
+const COLOR_SIGNAL = '#7BE0B0';
+const COLOR_BASE = '#1A1F2B';
+const COLOR_FOCUS = '#8B7CFF';
+const COLOR_HAIRLINE = '#242B3A';
+const COLOR_INK_2 = '#6C7689';
 
 export const CanvasGraph: React.FC<CanvasGraphProps> = ({
   wards,
@@ -53,6 +59,10 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
   selectedBorrowerId,
   onSelectBorrower,
   cascadeOriginBorrowerId,
+  isLoading = false,
+  hasError = false,
+  emptyFilterMessage = null,
+  onClearFilter,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -60,6 +70,7 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
   const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
   const isDraggingRef = useRef(false);
   const dragStartRef = useRef({ x: 0, y: 0 });
+  const hasPannedOrZoomed = useRef(false);
 
   const nodesRef = useRef<Map<string, NodeLayout>>(new Map());
   const hullsRef = useRef<ClusterHull[]>([]);
@@ -72,10 +83,7 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
     snapshot: StressSnapshot;
   } | null>(null);
 
-  // Animation ticker for active contagion pulse wave
-  const animTimeRef = useRef(0);
-
-  // Hierarchical Cluster Layout
+  // 1. Cluster Layout Generation (Flower / Ring structures by JLG and Centre)
   useEffect(() => {
     const nodeMap = new Map<string, NodeLayout>();
     const hulls: ClusterHull[] = [];
@@ -135,6 +143,7 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
             radius: 24,
           });
 
+          // Flower ring of 5 borrowers per JLG
           const members = borrowers.filter(b => b.jlgId === jlg.id);
           const memberRadius = 14;
 
@@ -180,6 +189,7 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
         y: (rect.height - universeHeight * initialScale) / 2,
         scale: initialScale,
       });
+      hasPannedOrZoomed.current = false;
     }
   }, [wards, centres, jlgs, borrowers, edges]);
 
@@ -194,11 +204,12 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
           x: rect.width / 2 - node.x * prev.scale,
           y: rect.height / 2 - node.y * prev.scale,
         }));
+        hasPannedOrZoomed.current = true;
       }
     }
   }, [selectedBorrowerId]);
 
-  // Render Canvas (60fps)
+  // 2. Render Canvas (60fps)
   const renderCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -218,91 +229,67 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, width, height);
 
-    // Deep obsidian background
-    ctx.fillStyle = '#090A0E';
+    // Canvas surface background: #12151D (--surface-1)
+    ctx.fillStyle = '#12151D';
     ctx.fillRect(0, 0, width, height);
 
     ctx.translate(transform.x, transform.y);
     ctx.scale(transform.scale, transform.scale);
 
-    // 1. Subtle High-Tech Dot Matrix Grid
-    const dotSpacing = 36;
-    const gridStartX = Math.floor((-transform.x / transform.scale) / dotSpacing) * dotSpacing - 36;
-    const gridEndX = gridStartX + (width / transform.scale) + 72;
-    const gridStartY = Math.floor((-transform.y / transform.scale) / dotSpacing) * dotSpacing - 36;
-    const gridEndY = gridStartY + (height / transform.scale) + 72;
-
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.035)';
-    for (let gx = gridStartX; gx <= gridEndX; gx += dotSpacing) {
-      for (let gy = gridStartY; gy <= gridEndY; gy += dotSpacing) {
-        ctx.fillRect(gx, gy, 1.2, 1.2);
-      }
-    }
-
-    // 2. Cluster Hulls
+    // 2.1 Cluster Hulls (flower/ring structure)
     hullsRef.current.forEach(hull => {
       if (hull.type === 'ward') {
         ctx.beginPath();
         ctx.arc(hull.cx, hull.cy, hull.radius, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(15, 17, 24, 0.55)';
+        ctx.fillStyle = 'rgba(11, 13, 18, 0.4)';
         ctx.fill();
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+        ctx.strokeStyle = COLOR_HAIRLINE;
         ctx.lineWidth = 1;
         ctx.stroke();
 
-        ctx.font = '600 11px "JetBrains Mono", monospace';
-        ctx.fillStyle = '#4B5366';
+        ctx.font = '500 11px "JetBrains Mono", monospace';
+        ctx.fillStyle = COLOR_INK_2;
         ctx.textAlign = 'center';
-        ctx.fillText(hull.name.toUpperCase(), hull.cx, hull.cy - hull.radius + 22);
+        ctx.fillText(hull.name.toUpperCase(), hull.cx, hull.cy - hull.radius + 20);
       } else if (hull.type === 'centre') {
         ctx.beginPath();
         ctx.arc(hull.cx, hull.cy, hull.radius, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.035)';
+        ctx.strokeStyle = 'rgba(36, 43, 58, 0.5)';
         ctx.lineWidth = 0.75;
+        ctx.stroke();
+      } else if (hull.type === 'jlg') {
+        ctx.beginPath();
+        ctx.arc(hull.cx, hull.cy, hull.radius, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(36, 43, 58, 0.3)';
+        ctx.lineWidth = 0.5;
         ctx.stroke();
       }
     });
 
-    // 3. Edges with Dynamic Contagion Flow
-    animTimeRef.current += 0.04;
-    const timeOffset = (animTimeRef.current * 20) % 30;
-
+    // 2.2 Edges
     const edges = edgeListRef.current;
     for (let i = 0; i < edges.length; i++) {
       const { src, dst, kind } = edges[i];
       const isConnectedToSelected = selectedBorrowerId && (src.id === selectedBorrowerId || dst.id === selectedBorrowerId);
-      const srcSnap = currentWeekSnapshots.get(src.id);
-      const dstSnap = currentWeekSnapshots.get(dst.id);
-      const hasContagion = (srcSnap?.latentStress ?? 0) > 0.35 && (dstSnap?.shareInduced ?? 0) > 0.3;
 
       ctx.beginPath();
       ctx.moveTo(src.x, src.y);
       ctx.lineTo(dst.x, dst.y);
 
       if (isConnectedToSelected) {
-        ctx.strokeStyle = kind === 'guarantee' ? '#FFFFFF' : 'rgba(99, 102, 241, 0.7)';
+        ctx.strokeStyle = kind === 'guarantee' ? '#EAEDF5' : 'rgba(139, 124, 255, 0.6)';
         ctx.lineWidth = 1.5;
-        ctx.stroke();
-      } else if (hasContagion && kind === 'guarantee') {
-        // Active contagion flow edge!
-        ctx.strokeStyle = 'rgba(244, 63, 94, 0.5)';
-        ctx.lineWidth = 1.2;
-        ctx.setLineDash([4, 6]);
-        ctx.lineDashOffset = -timeOffset;
-        ctx.stroke();
-        ctx.setLineDash([]);
       } else if (kind === 'guarantee') {
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-        ctx.lineWidth = 0.75;
-        ctx.stroke();
+        ctx.strokeStyle = 'rgba(36, 43, 58, 0.5)';
+        ctx.lineWidth = 0.8;
       } else {
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.02)';
+        ctx.strokeStyle = 'rgba(36, 43, 58, 0.2)';
         ctx.lineWidth = 0.5;
-        ctx.stroke();
       }
+      ctx.stroke();
     }
 
-    // 4. Nodes with Geometric Styling & Halos
+    // 2.3 Nodes: Color + Shape Pairing (Part 5)
     nodesRef.current.forEach(node => {
       const snapshot = currentWeekSnapshots.get(node.id);
       const isSelected = node.id === selectedBorrowerId;
@@ -311,73 +298,58 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
       const dominantType = snapshot?.dominantStressType ?? 'unflagged';
 
       let nodeColor = COLOR_BASE;
-      let strokeColor = 'rgba(255, 255, 255, 0.12)';
+      if (dominantType === 'idio') nodeColor = COLOR_IDIO;
+      else if (dominantType === 'induced') nodeColor = COLOR_INDUCED;
+      else if (dominantType === 'covariate') nodeColor = COLOR_COVARIATE;
 
-      if (dominantType === 'idio') {
-        nodeColor = COLOR_IDIO;
-        strokeColor = 'rgba(229, 184, 92, 0.5)';
-      } else if (dominantType === 'induced') {
-        nodeColor = COLOR_INDUCED;
-        strokeColor = 'rgba(244, 63, 94, 0.5)';
-      } else if (dominantType === 'covariate') {
-        nodeColor = COLOR_COVARIATE;
-        strokeColor = 'rgba(56, 189, 248, 0.5)';
-      }
-
-      const r = isSelected ? 8 : dominantType !== 'unflagged' ? 6 : 4;
+      // Size scaled to stress magnitude (capped between 4px and 9px)
+      const r = Math.max(4, Math.min(9, 4 + stress * 5));
 
       ctx.save();
       ctx.translate(node.x, node.y);
 
-      // Radial Halo on Stressed Nodes
-      if (dominantType !== 'unflagged') {
-        ctx.beginPath();
-        ctx.arc(0, 0, r + 5, 0, Math.PI * 2);
-        ctx.fillStyle = dominantType === 'induced' ? 'rgba(244, 63, 94, 0.2)' : 'rgba(229, 184, 92, 0.2)';
-        ctx.fill();
-      }
-
       ctx.beginPath();
       if (dominantType === 'induced') {
-        // Diamond
-        ctx.moveTo(0, -r * 1.3);
-        ctx.lineTo(r * 1.3, 0);
-        ctx.lineTo(0, r * 1.3);
-        ctx.lineTo(-r * 1.3, 0);
+        // Triangle (▲) for Induced
+        const h = r * 1.3;
+        ctx.moveTo(0, -h);
+        ctx.lineTo(h, h * 0.7);
+        ctx.lineTo(-h, h * 0.7);
         ctx.closePath();
       } else if (dominantType === 'covariate') {
-        // Square
+        // Square (■) for Covariate
         ctx.rect(-r * 0.9, -r * 0.9, r * 1.8, r * 1.8);
       } else {
-        // Circle
+        // Circle (●) for Idiosyncratic or Unflagged
         ctx.arc(0, 0, r, 0, Math.PI * 2);
       }
 
       ctx.fillStyle = nodeColor;
       ctx.fill();
 
-      ctx.strokeStyle = isSelected ? COLOR_SELECTION : strokeColor;
-      ctx.lineWidth = isSelected ? 2 : 1;
+      // Hairline border
+      ctx.strokeStyle = COLOR_HAIRLINE;
+      ctx.lineWidth = 1;
       ctx.stroke();
 
-      // Selection Marker
+      // Selected Node: Persistent Ring in --focus (#8B7CFF), never a color change!
       if (isSelected) {
         ctx.beginPath();
-        ctx.arc(0, 0, r + 6, 0, Math.PI * 2);
-        ctx.strokeStyle = '#FFFFFF';
-        ctx.lineWidth = 1.2;
-        ctx.setLineDash([2, 2]);
+        ctx.arc(0, 0, r + 5, 0, Math.PI * 2);
+        ctx.strokeStyle = COLOR_FOCUS;
+        ctx.lineWidth = 2;
         ctx.stroke();
-        ctx.setLineDash([]);
       }
 
-      // Shock Origin Pulse
+      // Cascade Origin Halo
       if (isOrigin) {
         ctx.beginPath();
-        ctx.arc(0, 0, r + 9, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(244, 63, 94, 0.7)';
+        ctx.arc(0, 0, r + 8, 0, Math.PI * 2);
+        ctx.strokeStyle = COLOR_INDUCED;
         ctx.lineWidth = 1.5;
+        ctx.setLineDash([3, 3]);
         ctx.stroke();
+        ctx.setLineDash([]);
       }
 
       ctx.restore();
@@ -396,6 +368,7 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
     return () => cancelAnimationFrame(animId);
   }, [renderCanvas]);
 
+  // Pan and Zoom
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (e.button === 0) {
       isDraggingRef.current = true;
@@ -408,6 +381,7 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
     if (!canvas) return;
 
     if (isDraggingRef.current) {
+      hasPannedOrZoomed.current = true;
       setTransform(prev => ({
         ...prev,
         x: e.clientX - dragStartRef.current.x,
@@ -424,7 +398,7 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
     nodesRef.current.forEach(node => {
       const dx = node.x - mouseCanvasX;
       const dy = node.y - mouseCanvasY;
-      if (dx * dx + dy * dy < 160) {
+      if (dx * dx + dy * dy < 144) {
         found = node;
       }
     });
@@ -434,8 +408,8 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
       if (snap) {
         let screenX = e.clientX - rect.left + 16;
         let screenY = e.clientY - rect.top + 16;
-        if (screenX + 250 > rect.width) screenX = e.clientX - rect.left - 260;
-        if (screenY + 140 > rect.height) screenY = e.clientY - rect.top - 150;
+        if (screenX + 220 > rect.width) screenX = e.clientX - rect.left - 230;
+        if (screenY + 100 > rect.height) screenY = e.clientY - rect.top - 110;
 
         setHoveredNode({
           node: found,
@@ -455,8 +429,9 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
 
   const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
     e.preventDefault();
+    hasPannedOrZoomed.current = true;
     const zoomFactor = e.deltaY < 0 ? 1.08 : 0.92;
-    const newScale = Math.min(3.2, Math.max(0.35, transform.scale * zoomFactor));
+    const newScale = Math.min(3.0, Math.max(0.35, transform.scale * zoomFactor));
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -482,7 +457,7 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
     nodesRef.current.forEach(node => {
       const dx = node.x - mouseCanvasX;
       const dy = node.y - mouseCanvasY;
-      if (dx * dx + dy * dy < 160) {
+      if (dx * dx + dy * dy < 144) {
         selected = node;
       }
     });
@@ -505,8 +480,81 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
         y: (rect.height - universeHeight * initialScale) / 2,
         scale: initialScale,
       });
+      hasPannedOrZoomed.current = false;
     }
   };
+
+  // State 1: Error fallback table (never blank)
+  if (hasError) {
+    return (
+      <div
+        className="surface-panel"
+        style={{
+          width: '100%',
+          height: '100%',
+          minHeight: '520px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 'var(--space-12)',
+          color: 'var(--ink-0)',
+        }}
+      >
+        <div style={{ color: 'var(--danger)', fontWeight: 600 }}>Graph Canvas Initialization Error</div>
+        <p style={{ fontSize: '12px', color: 'var(--ink-1)' }}>
+          The interactive visualization canvas could not be loaded. Displaying tabular fallback of active portfolio:
+        </p>
+        <div style={{ overflowY: 'auto', flex: 1 }}>
+          <table className="tremor-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Borrower</th>
+                <th>Centre</th>
+                <th>Stress Score</th>
+              </tr>
+            </thead>
+            <tbody>
+              {borrowers.slice(0, 15).map(b => (
+                <tr key={b.id} onClick={() => onSelectBorrower(b.id)} style={{ cursor: 'pointer' }}>
+                  <td className="tabular-num">{b.id.toUpperCase()}</td>
+                  <td>{b.displayName}</td>
+                  <td>{b.centreId}</td>
+                  <td className="tabular-num">{((currentWeekSnapshots.get(b.id)?.latentStress ?? 0) * 100).toFixed(1)}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
+
+  // State 2: Empty Filter State
+  if (emptyFilterMessage) {
+    return (
+      <div
+        className="surface-panel"
+        style={{
+          width: '100%',
+          height: '100%',
+          minHeight: '520px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          textAlign: 'center',
+          gap: 'var(--space-12)',
+        }}
+      >
+        <div style={{ color: 'var(--ink-1)', fontSize: '13px' }}>{emptyFilterMessage}</div>
+        {onClearFilter && (
+          <button className="btn-secondary" onClick={onClearFilter}>
+            Clear Filter
+          </button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div
@@ -515,16 +563,51 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
         position: 'relative',
         width: '100%',
         height: '100%',
-        minHeight: '560px',
-        backgroundColor: '#090A0E',
-        borderRadius: '12px',
-        border: '1px solid var(--border-subtle)',
+        minHeight: '520px',
+        backgroundColor: 'var(--surface-1)',
+        border: '1px solid var(--hairline)',
+        borderRadius: 'var(--radius-flat)',
         overflow: 'hidden',
+        zIndex: 'var(--z-panel)',
       }}
       tabIndex={0}
       role="region"
       aria-label="Contagion Network Map"
+      onKeyDown={e => {
+        if (!selectedBorrowerId && borrowers.length > 0) {
+          onSelectBorrower(borrowers[0].id);
+          return;
+        }
+        const currentIdx = borrowers.findIndex(b => b.id === selectedBorrowerId);
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+          e.preventDefault();
+          const nextIdx = (currentIdx + 1) % borrowers.length;
+          onSelectBorrower(borrowers[nextIdx].id);
+        } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          const prevIdx = (currentIdx - 1 + borrowers.length) % borrowers.length;
+          onSelectBorrower(borrowers[prevIdx].id);
+        }
+      }}
     >
+      {/* Loading Skeleton: static, faded node field, no shimmer (Part 4.3) */}
+      {isLoading && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundColor: 'var(--surface-1)',
+            opacity: 0.5,
+            zIndex: 15,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <span style={{ color: 'var(--ink-2)', fontSize: '12px' }}>Loading network topology...</span>
+        </div>
+      )}
+
       <canvas
         ref={canvasRef}
         style={{ width: '100%', height: '100%', display: 'block', cursor: 'grab' }}
@@ -536,107 +619,82 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
         onClick={handleClick}
       />
 
-      {/* Floating Modern HUD */}
+      {/* Top-Left Legend Row & Reset View Control (Part 4.3 & Part 5) */}
       <div
         style={{
           position: 'absolute',
-          top: '16px',
-          left: '16px',
+          top: 'var(--space-12)',
+          left: 'var(--space-12)',
           display: 'flex',
           alignItems: 'center',
-          gap: '12px',
-          backgroundColor: 'rgba(14, 16, 23, 0.85)',
-          padding: '6px 12px',
-          borderRadius: '999px',
-          border: '1px solid var(--border-subtle)',
-          backdropFilter: 'blur(16px)',
-          zIndex: 10,
+          gap: 'var(--space-12)',
+          backgroundColor: 'var(--surface-3)',
+          padding: '4px var(--space-8)',
+          borderRadius: 'var(--radius-control)',
+          border: '1px solid var(--hairline)',
+          zIndex: 'var(--z-panel)',
         }}
       >
         <button
+          className="btn-secondary"
           onClick={handleResetZoom}
-          className="btn-action"
-          style={{ height: '22px', fontSize: '11px', padding: '0 8px', borderRadius: '999px', border: 'none', background: 'rgba(255,255,255,0.06)' }}
+          style={{ height: '24px', padding: '0 var(--space-8)', fontSize: '11px' }}
           title="Reset Zoom"
+          aria-label="Reset View"
         >
           Reset View
         </button>
-        <span style={{ color: 'var(--border-subtle)' }}>•</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '11px', color: 'var(--text-secondary)' }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-            <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: COLOR_IDIO }} />
+
+        <span style={{ color: 'var(--hairline)' }}>|</span>
+
+        {/* Text-plus-swatch Legend with Shape Glyphs (Part 5) */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-12)', fontSize: '11px', color: 'var(--ink-1)' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ color: COLOR_IDIO, fontSize: '12px' }}>●</span>
             Idiosyncratic
           </span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-            <span style={{ width: '7px', height: '7px', backgroundColor: COLOR_INDUCED, transform: 'rotate(45deg)', display: 'inline-block' }} />
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ color: COLOR_INDUCED, fontSize: '10px' }}>▲</span>
             Induced
           </span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-            <span style={{ width: '7px', height: '7px', backgroundColor: COLOR_COVARIATE }} />
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ color: COLOR_COVARIATE, fontSize: '10px' }}>■</span>
             Covariate
+          </span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ color: 'var(--ink-2)', fontSize: '12px' }}>●</span>
+            Unflagged
           </span>
         </div>
       </div>
 
-      {/* Collision-Aware Frosted Tooltip */}
+      {/* Lightweight Hover Tooltip (Part 4.3) */}
       {hoveredNode && (
         <div
           style={{
             position: 'absolute',
             left: `${hoveredNode.screenX}px`,
             top: `${hoveredNode.screenY}px`,
-            width: '240px',
-            backgroundColor: 'rgba(14, 16, 23, 0.95)',
-            border: '1px solid var(--border-medium)',
-            borderRadius: '8px',
-            padding: '12px',
+            width: '210px',
+            backgroundColor: 'var(--surface-3)',
+            border: '1px solid var(--hairline)',
+            borderRadius: 'var(--radius-control)',
+            padding: 'var(--space-8)',
             pointerEvents: 'none',
-            zIndex: 20,
-            backdropFilter: 'blur(16px)',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)',
+            zIndex: 'var(--z-tooltip)',
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-            <span style={{ fontWeight: 600, color: '#fff', fontSize: '13px' }}>
+            <span style={{ fontWeight: 500, color: 'var(--ink-0)', fontSize: '12px' }}>
               {hoveredNode.node.borrower.displayName}
             </span>
-            <span
-              className="font-mono-num"
-              style={{
-                fontSize: '12px',
-                fontWeight: 700,
-                color:
-                  hoveredNode.snapshot.dominantStressType === 'induced'
-                    ? COLOR_INDUCED
-                    : hoveredNode.snapshot.dominantStressType === 'idio'
-                    ? COLOR_IDIO
-                    : hoveredNode.snapshot.dominantStressType === 'covariate'
-                    ? COLOR_COVARIATE
-                    : '#fff',
-              }}
-            >
-              {(hoveredNode.snapshot.latentStress * 100).toFixed(0)}%
+            <span className="tabular-num" style={{ fontSize: '11px', color: 'var(--ink-0)', fontWeight: 600 }}>
+              {(hoveredNode.snapshot.latentStress * 100).toFixed(1)}%
             </span>
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-            {hoveredNode.node.borrower.occupation}
+          <div style={{ fontSize: '11px', color: 'var(--ink-1)', marginTop: '2px' }}>
+            {hoveredNode.node.borrower.jlgId.toUpperCase()} · {hoveredNode.node.borrower.occupation}
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-            {hoveredNode.node.borrower.jlgId.toUpperCase()} · DPD: {hoveredNode.snapshot.dpd}d
-          </div>
-          {hoveredNode.snapshot.sourceBorrowerName && (
-            <div
-              style={{
-                fontSize: '11px',
-                color: COLOR_INDUCED,
-                marginTop: '8px',
-                paddingTop: '6px',
-                borderTop: '1px solid var(--border-subtle)',
-              }}
-            >
-              Induced from {hoveredNode.snapshot.sourceBorrowerName}
-            </div>
-          )}
         </div>
       )}
     </div>

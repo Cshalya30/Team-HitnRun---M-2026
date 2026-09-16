@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 
 interface TimelineSequencerProps {
   currentWeek: number;
@@ -22,8 +22,11 @@ export const TimelineSequencer: React.FC<TimelineSequencerProps> = ({
   weeklyStressScores,
 }) => {
   const [speed, setSpeed] = useState<1 | 2 | 4>(1);
+  const [isDragging, setIsDragging] = useState(false);
+  const trackRef = useRef<HTMLDivElement>(null);
   const playbackTimerRef = useRef<number | null>(null);
 
+  // Playback loop with cascade timing (~600ms / speed)
   useEffect(() => {
     if (isPlaying) {
       const intervalMs = Math.max(120, 600 / speed);
@@ -36,47 +39,132 @@ export const TimelineSequencer: React.FC<TimelineSequencerProps> = ({
     }
 
     return () => {
-      if (playbackTimerRef.current) clearInterval(playbackTimerRef.current);
+      if (playbackTimerRef.current) {
+        clearInterval(playbackTimerRef.current);
+      }
     };
   }, [isPlaying, currentWeek, totalWeeks, speed, onWeekChange]);
 
+  // Global keyboard shortcuts (Space, ArrowLeft, ArrowRight, Home, End)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement
+      ) {
+        return;
+      }
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        onTogglePlay();
+      } else if (e.code === 'ArrowRight') {
+        e.preventDefault();
+        onStepForward();
+      } else if (e.code === 'ArrowLeft') {
+        e.preventDefault();
+        onStepBackward();
+      } else if (e.code === 'Home') {
+        e.preventDefault();
+        onWeekChange(1);
+      } else if (e.code === 'End') {
+        e.preventDefault();
+        onWeekChange(totalWeeks);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onTogglePlay, onStepForward, onStepBackward, onWeekChange, totalWeeks]);
+
+  // Handle Scrubbing Live (0ms lag)
+  const calculateWeekFromEvent = useCallback(
+    (clientX: number) => {
+      if (!trackRef.current) return currentWeek;
+      const rect = trackRef.current.getBoundingClientRect();
+      const offsetX = Math.max(0, Math.min(rect.width, clientX - rect.left));
+      const ratio = offsetX / rect.width;
+      const targetWeek = Math.max(1, Math.min(totalWeeks, Math.round(ratio * (totalWeeks - 1)) + 1));
+      return targetWeek;
+    },
+    [totalWeeks, currentWeek]
+  );
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setIsDragging(true);
+    const newWeek = calculateWeekFromEvent(e.clientX);
+    onWeekChange(newWeek);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDragging) return;
+    const newWeek = calculateWeekFromEvent(e.clientX);
+    if (newWeek !== currentWeek) {
+      onWeekChange(newWeek);
+    }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (isDragging) {
+      setIsDragging(false);
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {
+        // pointer capture already released
+      }
+    }
+  };
+
+  // Calendar date derivation
   const simulatedDate = new Date(2025, 0, 1 + (currentWeek - 1) * 7);
-  const formattedDate = simulatedDate.toLocaleDateString('en-US', {
+  const formattedDate = simulatedDate.toLocaleDateString('en-IN', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
   });
 
-  // Milestones pinned to timeline
+  // Shock milestones with exact v2 compact badge copy and shape pairings
   const milestones = [
-    { week: 12, label: 'Borrower Shock', tag: '🚩' },
-    { week: 34, label: 'Ward Flood', tag: '🌊' },
-    { week: 52, label: 'Renewal', tag: '↻' },
-    { week: 60, label: 'Refinancing Freeze', tag: '⚡' },
+    { week: 12, code: 'WK12', label: 'Idiosyncratic Shock', shape: '●', color: 'var(--idio)' },
+    { week: 34, code: 'WK34', label: 'Ward Flood (Covariate)', shape: '■', color: 'var(--covariate)' },
+    { week: 52, code: 'WK52', label: 'Annual Loan Cycle Renewal', shape: '▲', color: 'var(--ink-1)' },
+    { week: 60, code: 'WK60', label: '60+ DPD Refinancing Freeze', shape: '▲', color: 'var(--induced)' },
   ];
 
   return (
     <div
       style={{
+        height: '64px',
         display: 'flex',
         alignItems: 'center',
-        gap: '16px',
-        padding: '10px 18px',
-        backgroundColor: 'rgba(14, 16, 23, 0.95)',
-        borderBottom: '1px solid var(--border-subtle)',
-        backdropFilter: 'blur(16px)',
-        zIndex: 30,
+        gap: 'var(--space-16)',
+        padding: '0 var(--space-24)',
+        backgroundColor: 'var(--surface-0)',
+        borderBottom: '1px solid var(--hairline)',
+        zIndex: 'var(--z-sticky)' as any,
+        userSelect: 'none',
       }}
       role="region"
-      aria-label="Contagion Timeline Sequencer"
+      aria-label="Simulation Scrubber and Timeline"
     >
       {/* Transport Controls */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', flexShrink: 0 }}>
+        {/* Play/Pause */}
         <button
-          className={`btn-action ${isPlaying ? 'active' : ''}`}
+          className="btn-primary"
           onClick={onTogglePlay}
-          style={{ width: '32px', height: '32px', padding: 0, borderRadius: '8px' }}
-          title={isPlaying ? 'Pause (Space)' : 'Play simulation (Space)'}
+          style={{
+            width: '32px',
+            height: '32px',
+            padding: 0,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          title={isPlaying ? 'Pause (Space)' : 'Play cascade (Space)'}
+          aria-label={isPlaying ? 'Pause simulation' : 'Play simulation'}
         >
           {isPlaying ? (
             <svg width="10" height="12" viewBox="0 0 10 12" fill="currentColor">
@@ -85,182 +173,287 @@ export const TimelineSequencer: React.FC<TimelineSequencerProps> = ({
             </svg>
           ) : (
             <svg width="10" height="12" viewBox="0 0 10 12" fill="currentColor">
-              <path d="M1 0.8V11.2L9.5 6L1 0.8Z" />
+              <path d="M1 1L9 6L1 11V1Z" />
             </svg>
           )}
         </button>
 
+        {/* Step Backward */}
         <button
-          className="btn-action"
+          className="btn-secondary"
           onClick={onStepBackward}
           disabled={currentWeek <= 1}
-          style={{ width: '28px', height: '28px', padding: 0 }}
-          title="Step backward 1 week"
+          style={{
+            width: '28px',
+            height: '28px',
+            padding: 0,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          title="Step backward 1 week (Left Arrow)"
+          aria-label="Step backward 1 week"
         >
           <svg width="8" height="10" viewBox="0 0 8 10" fill="currentColor">
             <path d="M7 1L2 5L7 9V1Z" />
           </svg>
         </button>
 
+        {/* Step Forward */}
         <button
-          className="btn-action"
+          className="btn-secondary"
           onClick={onStepForward}
           disabled={currentWeek >= totalWeeks}
-          style={{ width: '28px', height: '28px', padding: 0 }}
-          title="Step forward 1 week"
+          style={{
+            width: '28px',
+            height: '28px',
+            padding: 0,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          title="Step forward 1 week (Right Arrow)"
+          aria-label="Step forward 1 week"
         >
           <svg width="8" height="10" viewBox="0 0 8 10" fill="currentColor">
             <path d="M1 1L6 5L1 9V1Z" />
           </svg>
         </button>
 
-        {/* Speed multiplier pill */}
-        <button
-          className="btn-action"
-          onClick={() => setSpeed(speed === 1 ? 2 : speed === 2 ? 4 : 1)}
-          style={{ fontSize: '11px', height: '28px', padding: '0 8px', color: 'var(--text-secondary)' }}
-          title="Change simulation playback speed"
+        {/* Segmented Speed Toggle: 1x / 2x / 4x */}
+        <div
+          style={{
+            display: 'inline-flex',
+            border: '1px solid var(--hairline)',
+            borderRadius: 'var(--radius-control)',
+            backgroundColor: 'var(--surface-1)',
+            marginLeft: 'var(--space-4)',
+            overflow: 'hidden',
+          }}
+          role="group"
+          aria-label="Playback speed"
         >
-          {speed}x
-        </button>
+          {([1, 2, 4] as const).map(s => (
+            <button
+              key={s}
+              onClick={() => setSpeed(s)}
+              style={{
+                height: '26px',
+                padding: '0 8px',
+                fontSize: '11px',
+                fontFamily: 'var(--font-mono)',
+                fontWeight: speed === s ? 600 : 400,
+                color: speed === s ? 'var(--ink-0)' : 'var(--ink-2)',
+                backgroundColor: speed === s ? 'var(--surface-2)' : 'transparent',
+                border: 'none',
+                borderRight: s !== 4 ? '1px solid var(--hairline)' : 'none',
+                cursor: 'pointer',
+                transition: 'background 120ms ease, color 120ms ease',
+              }}
+              title={`Set speed to ${s}x`}
+            >
+              {s}x
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Week & Date Label */}
-      <div style={{ minWidth: '130px', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-          <span style={{ fontSize: '14px', fontWeight: 700, color: '#fff' }}>
-            WEEK <span className="font-mono-num">{String(currentWeek).padStart(2, '0')}</span>
+      {/* Week Label in Display Face & Date in ink-1 */}
+      <div style={{ minWidth: '130px', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--space-4)' }}>
+          <span
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: '16px',
+              fontWeight: 600,
+              color: 'var(--ink-0)',
+              letterSpacing: '-0.02em',
+            }}
+          >
+            Week {currentWeek}
           </span>
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>/ 78</span>
+          <span
+            className="tabular-num"
+            style={{ fontSize: '11px', color: 'var(--ink-2)' }}
+          >
+            / {totalWeeks}
+          </span>
         </div>
-        <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+        <div style={{ fontSize: '11px', color: 'var(--ink-1)', lineHeight: 1.2 }}>
           {formattedDate}
         </div>
       </div>
 
-      {/* Interactive 78-Week Stress Volume Histogram & Scrubber */}
+      {/* Timeline Track with Shock Milestones & Histogram */}
       <div
+        ref={trackRef}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
         style={{
           flex: 1,
           position: 'relative',
-          height: '36px',
+          height: '48px',
           display: 'flex',
-          alignItems: 'flex-end',
-          gap: '2px',
-          cursor: 'pointer',
-          padding: '0 4px',
+          flexDirection: 'column',
+          justifyContent: 'flex-end',
+          cursor: isDragging ? 'grabbing' : 'pointer',
+          touchAction: 'none',
         }}
-        onClick={e => {
-          const rect = e.currentTarget.getBoundingClientRect();
-          const clickX = e.clientX - rect.left;
-          const ratio = Math.max(0, Math.min(1, clickX / rect.width));
-          const targetWeek = Math.max(1, Math.min(totalWeeks, Math.round(ratio * totalWeeks)));
-          onWeekChange(targetWeek);
-        }}
+        role="slider"
+        aria-valuemin={1}
+        aria-valuemax={totalWeeks}
+        aria-valuenow={currentWeek}
+        aria-label="Simulation timeline week scrubber"
       >
-        {/* Milestone Markers on Timeline */}
-        {milestones.map(m => {
-          const leftPct = ((m.week - 1) / (totalWeeks - 1)) * 100;
-          return (
-            <div
-              key={m.week}
-              onClick={e => {
-                e.stopPropagation();
-                onWeekChange(m.week);
-              }}
-              style={{
-                position: 'absolute',
-                top: '-4px',
-                left: `${leftPct}%`,
-                transform: 'translateX(-50%)',
-                fontSize: '10px',
-                cursor: 'pointer',
-                zIndex: 10,
-                opacity: currentWeek === m.week ? 1 : 0.6,
-                transition: 'opacity 120ms',
-              }}
-              title={`Jump to W${m.week}: ${m.label}`}
-            >
-              {m.tag}
-            </div>
-          );
-        })}
-
-        {/* 78 Histogram Bars */}
-        {Array.from({ length: totalWeeks }).map((_, idx) => {
-          const w = idx + 1;
-          const stressVal = weeklyStressScores[idx] ?? 0.12;
-          const isPassed = w <= currentWeek;
-          const isCurrent = w === currentWeek;
-
-          let barColor = isPassed ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.08)';
-          if (stressVal > 0.35) {
-            barColor = isPassed ? 'var(--color-induced)' : 'rgba(244, 63, 94, 0.35)';
-          } else if (stressVal > 0.22) {
-            barColor = isPassed ? 'var(--color-idio)' : 'rgba(229, 184, 92, 0.35)';
-          }
-
-          if (isCurrent) {
-            barColor = '#FFFFFF';
-          }
-
-          const barHeight = Math.max(4, Math.round(stressVal * 28));
-
-          return (
-            <div
-              key={w}
-              style={{
-                flex: 1,
-                height: `${barHeight}px`,
-                backgroundColor: barColor,
-                borderRadius: '1px',
-                transition: 'height 100ms ease, background-color 100ms ease',
-              }}
-              title={`Week ${w} Portfolio Stress: ${(stressVal * 100).toFixed(0)}%`}
-            />
-          );
-        })}
-
-        {/* Playhead Indicator Line */}
+        {/* Shock Marker Row above track */}
         <div
           style={{
-            position: 'absolute',
-            left: `${((currentWeek - 1) / (totalWeeks - 1)) * 100}%`,
-            top: 0,
-            bottom: 0,
-            width: '2px',
-            backgroundColor: '#fff',
-            boxShadow: '0 0 8px rgba(255, 255, 255, 0.8)',
-            transform: 'translateX(-50%)',
+            position: 'relative',
+            height: '18px',
+            width: '100%',
+            marginBottom: '4px',
             pointerEvents: 'none',
-            zIndex: 5,
           }}
-        />
+        >
+          {milestones.map(m => {
+            const leftRatio = (m.week - 1) / (totalWeeks - 1);
+            const isTarget = currentWeek === m.week;
+            return (
+              <div
+                key={m.week}
+                onClick={e => {
+                  e.stopPropagation();
+                  onWeekChange(m.week);
+                }}
+                style={{
+                  position: 'absolute',
+                  left: `${leftRatio * 100}%`,
+                  transform: 'translateX(-50%)',
+                  pointerEvents: 'auto',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                  padding: '1px 5px',
+                  borderRadius: 'var(--radius-control)',
+                  backgroundColor: isTarget ? 'var(--surface-3)' : 'var(--surface-1)',
+                  border: `1px solid ${isTarget ? m.color : 'var(--hairline)'}`,
+                  fontSize: '10px',
+                  fontFamily: 'var(--font-mono)',
+                  color: isTarget ? 'var(--ink-0)' : 'var(--ink-1)',
+                  zIndex: isTarget ? 15 : 10,
+                  transition: 'border-color 120ms, color 120ms',
+                }}
+                title={`Week ${m.week}: ${m.label}`}
+              >
+                <span style={{ color: m.color, fontSize: '8px' }}>{m.shape}</span>
+                <span>{m.code}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* 78 Histogram Bars Track */}
+        <div
+          style={{
+            position: 'relative',
+            height: '24px',
+            display: 'flex',
+            alignItems: 'flex-end',
+            gap: '1px',
+            backgroundColor: 'var(--surface-1)',
+            borderRadius: 'var(--radius-table)',
+            border: '1px solid var(--hairline)',
+            padding: '2px 3px',
+            overflow: 'hidden',
+          }}
+        >
+          {Array.from({ length: totalWeeks }).map((_, idx) => {
+            const w = idx + 1;
+            const stressVal = weeklyStressScores[idx] ?? 0.12;
+            const isPassed = w <= currentWeek;
+            const isCurrent = w === currentWeek;
+
+            let barColor = isPassed ? 'rgba(167, 175, 194, 0.4)' : 'rgba(108, 118, 137, 0.2)';
+            if (stressVal > 0.35) {
+              barColor = isPassed ? 'var(--induced)' : 'rgba(224, 90, 107, 0.3)';
+            } else if (stressVal > 0.22) {
+              barColor = isPassed ? 'var(--idio)' : 'rgba(232, 196, 104, 0.3)';
+            }
+
+            if (isCurrent) {
+              barColor = 'var(--ink-0)';
+            }
+
+            const barHeight = Math.max(3, Math.round(stressVal * 20));
+
+            return (
+              <div
+                key={w}
+                style={{
+                  flex: 1,
+                  height: `${barHeight}px`,
+                  backgroundColor: barColor,
+                  borderRadius: '0px',
+                  transition: 'height 80ms ease, background-color 80ms ease',
+                }}
+              />
+            );
+          })}
+
+          {/* Draggable Playhead Needle */}
+          <div
+            style={{
+              position: 'absolute',
+              left: `${((currentWeek - 1) / (totalWeeks - 1)) * 100}%`,
+              top: 0,
+              bottom: 0,
+              width: '2px',
+              backgroundColor: 'var(--ink-0)',
+              transform: 'translateX(-50%)',
+              pointerEvents: 'none',
+              zIndex: 20,
+            }}
+          >
+            {/* Playhead Handle Top indicator */}
+            <div
+              style={{
+                position: 'absolute',
+                top: '-3px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: '6px',
+                height: '6px',
+                backgroundColor: 'var(--ink-0)',
+                borderRadius: '50%',
+              }}
+            />
+          </div>
+        </div>
       </div>
 
-      {/* Quick Jump Buttons */}
-      <div style={{ display: 'flex', gap: '4px' }}>
-        <button
-          className="btn-action"
-          onClick={() => onWeekChange(12)}
-          style={{ fontSize: '11px', height: '26px', padding: '0 8px' }}
-        >
-          🚩 W12
-        </button>
-        <button
-          className="btn-action"
-          onClick={() => onWeekChange(34)}
-          style={{ fontSize: '11px', height: '26px', padding: '0 8px' }}
-        >
-          🌊 W34
-        </button>
-        <button
-          className="btn-action"
-          onClick={() => onWeekChange(60)}
-          style={{ fontSize: '11px', height: '26px', padding: '0 8px', color: 'var(--color-induced)' }}
-        >
-          ⚡ W60
-        </button>
+      {/* Direct Jump Pill Buttons */}
+      <div style={{ display: 'flex', gap: 'var(--space-4)', flexShrink: 0 }}>
+        {milestones.map(m => (
+          <button
+            key={m.week}
+            className="btn-secondary"
+            onClick={() => onWeekChange(m.week)}
+            style={{
+              fontSize: '11px',
+              fontFamily: 'var(--font-mono)',
+              height: '26px',
+              padding: '0 8px',
+              borderColor: currentWeek === m.week ? m.color : 'var(--hairline)',
+              color: currentWeek === m.week ? 'var(--ink-0)' : 'var(--ink-1)',
+            }}
+            title={`Jump directly to Week ${m.week}`}
+          >
+            {m.code}
+          </button>
+        ))}
       </div>
     </div>
   );

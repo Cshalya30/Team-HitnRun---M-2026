@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { performCounterfactualAblation } from '../engine/attribution';
 import { Borrower, Centre, JLG, StressSnapshot, Ward } from '../engine/types';
 
@@ -15,9 +15,30 @@ interface AttributionDossierProps {
   };
   isLoading?: boolean;
   error?: string | null;
+  onRetry?: () => void;
   onSelectBorrowerId?: (id: string) => void;
   onOpenInterventionModal?: () => void;
 }
+
+const SIGNAL_LABELS: Record<string, string> = {
+  crossPayment: 'Cross-Payment (Proxy EMI)',
+  attendance: 'Meeting Attendance Absence',
+  instalmentDelay: 'Instalment Delay (DPD)',
+  multiLender: 'Multi-Lender Exposure',
+  dtiBurden: 'DTI Income Strain',
+  loanCycle: 'Loan Cycle Fatigue',
+  socialDisruption: 'JLG Social Breakdown',
+  seasonalMismatch: 'Seasonal Cashflow Disruption',
+};
+
+const formatINR = (val: number): string => {
+  return '₹' + Math.round(val).toLocaleString('en-IN');
+};
+
+const formatCiDelta = (low: number, high: number): string => {
+  const halfWidth = Math.max(1, Math.round(((high - low) / 2) * 100));
+  return `±${halfWidth}%`;
+};
 
 export const AttributionDossier: React.FC<AttributionDossierProps> = ({
   borrower,
@@ -25,86 +46,137 @@ export const AttributionDossier: React.FC<AttributionDossierProps> = ({
   ward,
   jlg,
   snapshot,
-  transientMetric,
   isLoading = false,
   error = null,
+  onRetry,
   onSelectBorrowerId,
   onOpenInterventionModal,
 }) => {
-  const [showAllSignals, setShowAllSignals] = useState(false);
+  const [hoveredSegment, setHoveredSegment] = useState<'idio' | 'induced' | 'covariate' | null>(null);
 
+  // Four explicit states: loading, error, empty, loaded
+
+  // 1. Loading State (static skeleton in --surface-2, zero shimmer)
   if (isLoading) {
     return (
-      <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        <div style={{ height: '24px', width: '60%', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '4px' }} />
-        <div style={{ height: '60px', width: '100%', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '8px' }} />
-        <div style={{ height: '140px', width: '100%', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '8px' }} />
+      <div
+        style={{
+          padding: 'var(--space-16)',
+          backgroundColor: 'var(--surface-1)',
+          border: '1px solid var(--hairline)',
+          borderRadius: 'var(--radius-panel)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 'var(--space-16)',
+          height: '100%',
+        }}
+        role="region"
+        aria-label="Loading Borrower Dossier"
+      >
+        {/* Identity Skeleton */}
+        <div style={{ display: 'flex', gap: 'var(--space-12)', alignItems: 'center' }}>
+          <div style={{ width: '40px', height: '40px', backgroundColor: 'var(--surface-2)', borderRadius: 'var(--radius-control)' }} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+            <div style={{ height: '16px', width: '50%', backgroundColor: 'var(--surface-2)', borderRadius: '2px' }} />
+            <div style={{ height: '12px', width: '70%', backgroundColor: 'var(--surface-2)', borderRadius: '2px' }} />
+          </div>
+        </div>
+
+        {/* Latent Stress Skeleton */}
+        <div style={{ height: '56px', backgroundColor: 'var(--surface-2)', borderRadius: 'var(--radius-control)' }} />
+
+        {/* Causal Stacked Bar Skeleton */}
+        <div style={{ height: '72px', backgroundColor: 'var(--surface-2)', borderRadius: 'var(--radius-control)' }} />
+
+        {/* Bell Curve Skeleton */}
+        <div style={{ height: '52px', backgroundColor: 'var(--surface-2)', borderRadius: 'var(--radius-control)' }} />
+
+        {/* Signal Rows Skeleton */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} style={{ height: '18px', backgroundColor: 'var(--surface-2)', borderRadius: '2px' }} />
+          ))}
+        </div>
       </div>
     );
   }
 
+  // 2. Error State (shows failing step and retry affordance)
   if (error) {
     return (
-      <div className="glass-panel" style={{ padding: '20px', border: '1px solid var(--color-induced)' }}>
-        <div style={{ color: 'var(--color-induced)', fontWeight: 600, fontSize: '13px' }}>Diagnostic Error</div>
-        <div style={{ color: 'var(--text-secondary)', fontSize: '12px', marginTop: '4px' }}>{error}</div>
+      <div
+        style={{
+          padding: 'var(--space-24)',
+          backgroundColor: 'var(--surface-1)',
+          border: '1px solid var(--danger)',
+          borderRadius: 'var(--radius-panel)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 'var(--space-12)',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100%',
+          textAlign: 'center',
+        }}
+        role="alert"
+      >
+        <div style={{ color: 'var(--danger)', fontSize: '13px', fontWeight: 600 }}>
+          Attribution Computation Failed
+        </div>
+        <div style={{ color: 'var(--ink-1)', fontSize: '12px', maxWidth: '300px', lineHeight: 1.5 }}>
+          {error}
+        </div>
+        {onRetry && (
+          <button className="btn-secondary" onClick={onRetry} style={{ marginTop: 'var(--space-8)' }}>
+            Retry Calculation
+          </button>
+        )}
       </div>
     );
   }
 
+  // 3. Empty State (Strictly text only: "Select a borrower on the graph to see their attribution." in ink-1, centered, no icon)
   if (!borrower || !snapshot) {
     return (
       <div
-        className="glass-panel"
         style={{
-          padding: '24px',
           display: 'flex',
-          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          minHeight: '480px',
+          height: '100%',
+          padding: 'var(--space-24)',
+          backgroundColor: 'var(--surface-1)',
+          border: '1px solid var(--hairline)',
+          borderRadius: 'var(--radius-panel)',
           textAlign: 'center',
-          gap: '12px',
         }}
+        role="region"
+        aria-label="Borrower Attribution Dossier"
       >
-        <div
-          style={{
-            width: '44px',
-            height: '44px',
-            borderRadius: '50%',
-            backgroundColor: 'rgba(255, 255, 255, 0.03)',
-            border: '1px solid var(--border-subtle)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'var(--text-muted)',
-            fontSize: '18px',
-          }}
-        >
-          ⌖
-        </div>
-        <div style={{ fontSize: '14px', fontWeight: 600, color: '#fff' }}>No Borrower Selected</div>
-        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', maxWidth: '240px', lineHeight: 1.5 }}>
-          Select any borrower node on the contagion network map to inspect her causal attribution dossier.
+        <div style={{ color: 'var(--ink-1)', fontSize: '13px', lineHeight: 1.5, maxWidth: '280px' }}>
+          Select a borrower on the graph to see their attribution.
         </div>
       </div>
     );
   }
 
+  // 4. Loaded State: Pure calculation and clean anatomy
   const ablation = performCounterfactualAblation(snapshot, borrower.displayName);
   const cb = ablation.confidenceBand;
 
-  const idioPct = Math.round(snapshot.shareIdio * 100);
-  const inducedPct = Math.round(snapshot.shareInduced * 100);
-  const covPct = Math.round(snapshot.shareCovariate * 100);
+  const idioPct = (snapshot.shareIdio * 100).toFixed(1);
+  const inducedPct = (snapshot.shareInduced * 100).toFixed(1);
+  const covPct = (snapshot.shareCovariate * 100).toFixed(1);
 
-  // SVG Monte Carlo Bell Curve Generator
-  const curvePoints = Array.from({ length: 41 }).map((_, i) => {
-    const x = i; // 0 to 40
-    const normX = (x - 20) / 6;
-    const y = Math.exp(-0.5 * normX * normX);
-    return `${(x / 40) * 200},${45 - y * 38}`;
-  }).join(' ');
+  // SVG Monte Carlo Bell Curve coordinates
+  const curvePoints = Array.from({ length: 41 })
+    .map((_, i) => {
+      const x = i;
+      const normX = (x - 20) / 6;
+      const y = Math.exp(-0.5 * normX * normX);
+      return `${(x / 40) * 200},${42 - y * 36}`;
+    })
+    .join(' ');
 
   const initials = borrower.displayName
     .split(' ')
@@ -112,204 +184,303 @@ export const AttributionDossier: React.FC<AttributionDossierProps> = ({
     .join('')
     .slice(0, 2);
 
+  // Dominant color mapping
+  const dominantColor =
+    snapshot.dominantStressType === 'induced'
+      ? 'var(--induced)'
+      : snapshot.dominantStressType === 'idio'
+      ? 'var(--idio)'
+      : snapshot.dominantStressType === 'covariate'
+      ? 'var(--covariate)'
+      : 'var(--ink-0)';
+
   return (
     <div
-      className="glass-panel"
       style={{
-        padding: '20px',
+        padding: 'var(--space-16)',
+        backgroundColor: 'var(--surface-1)',
+        border: '1px solid var(--hairline)',
+        borderRadius: 'var(--radius-panel)',
         display: 'flex',
         flexDirection: 'column',
-        gap: '20px',
+        gap: 'var(--space-16)',
         height: '100%',
         overflowY: 'auto',
+        userSelect: 'text',
       }}
       role="region"
       aria-label={`Diagnostic Dossier for ${borrower.displayName}`}
     >
-      {/* Borrower Profile Hero */}
-      <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+      {/* 1. Identity Block */}
+      <div style={{ display: 'flex', gap: 'var(--space-12)', alignItems: 'flex-start' }}>
+        {/* Avatar-style Initials Chip */}
         <div
           style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '10px',
-            background: 'linear-gradient(135deg, #1E2230 0%, #11131A 100%)',
-            border: '1px solid var(--border-medium)',
+            width: '40px',
+            height: '40px',
+            borderRadius: 'var(--radius-control)',
+            backgroundColor: 'var(--surface-2)',
+            border: '1px solid var(--hairline)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontWeight: 700,
+            fontFamily: 'var(--font-mono)',
+            fontWeight: 600,
             fontSize: '13px',
-            color: '#fff',
+            color: 'var(--ink-0)',
             flexShrink: 0,
-            letterSpacing: '0.02em',
+            letterSpacing: '0.04em',
           }}
         >
           {initials}
         </div>
 
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <h2 style={{ fontSize: '17px', fontWeight: 600, color: '#fff', letterSpacing: '-0.02em' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--space-8)' }}>
+            <h2
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '18px',
+                fontWeight: 600,
+                color: 'var(--ink-0)',
+                letterSpacing: '-0.02em',
+                lineHeight: 1.2,
+                margin: 0,
+              }}
+            >
               {borrower.displayName}
             </h2>
-            <span className="chip">{borrower.id.toUpperCase()}</span>
+            <span
+              className="tabular-num"
+              style={{
+                fontSize: '11px',
+                color: 'var(--ink-2)',
+                letterSpacing: '0.02em',
+              }}
+            >
+              {borrower.id.toUpperCase()}
+            </span>
           </div>
 
-          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-            {borrower.occupation} · Cycle {borrower.loanCycle}
+          <div style={{ fontSize: '12px', color: 'var(--ink-1)', marginTop: '2px', lineHeight: 1.4 }}>
+            {borrower.occupation} · Cycle {borrower.loanCycle} · Principal {formatINR(borrower.principal)} · EMI {formatINR(borrower.emi)}/wk
           </div>
 
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
-            {jlg?.name.split('(')[0].trim()} · {centre?.name.split('Centre')[0].trim()}
+          <div style={{ fontSize: '11px', color: 'var(--ink-2)', marginTop: '2px' }}>
+            {jlg?.name ?? 'JLG Group'} · {centre?.name ?? 'Centre'} · {ward?.name ?? 'Ward'}
           </div>
         </div>
       </div>
 
-      {/* Latent Stress KPI Display */}
+      {/* 2. Latent Stress Exposure KPI */}
       <div
         style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'flex-end',
-          paddingBottom: '16px',
-          borderBottom: '1px solid var(--border-subtle)',
+          paddingBottom: 'var(--space-12)',
+          borderBottom: '1px solid var(--hairline)',
         }}
       >
         <div>
-          <div style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)' }}>
+          <div
+            style={{
+              fontSize: '11px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+              color: 'var(--ink-2)',
+              fontFamily: 'var(--font-mono)',
+            }}
+          >
             Latent Stress Exposure
           </div>
           <div
-            className="font-mono-num"
+            className="tabular-num"
             style={{
-              fontSize: '34px',
+              fontSize: '32px',
               fontWeight: 700,
-              color:
-                snapshot.latentStress >= 0.45
-                  ? 'var(--color-induced)'
-                  : snapshot.latentStress >= 0.35
-                  ? 'var(--color-idio)'
-                  : 'var(--color-signal)',
+              color: dominantColor,
               letterSpacing: '-0.03em',
-              lineHeight: 1.05,
-              marginTop: '2px',
+              lineHeight: 1.1,
+              marginTop: '4px',
             }}
           >
             {(snapshot.latentStress * 100).toFixed(1)}%
           </div>
         </div>
 
-        <div style={{ textAlign: 'right' }}>
-          <span
-            className="chip"
+        {/* Status / Evidence Quality Floating Badge */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+          <div
+            className="status-badge"
             style={{
-              borderColor: snapshot.isEscalated ? 'rgba(244, 63, 94, 0.4)' : 'var(--border-subtle)',
-              color: snapshot.isEscalated ? 'var(--color-induced)' : 'var(--text-secondary)',
-              backgroundColor: snapshot.isEscalated ? 'rgba(244, 63, 94, 0.08)' : 'rgba(255, 255, 255, 0.03)',
+              backgroundColor: 'var(--surface-3)',
+              borderColor: snapshot.isEscalated ? 'var(--induced)' : 'var(--hairline)',
+              color: snapshot.isEscalated ? 'var(--induced)' : 'var(--ink-1)',
+              zIndex: 'var(--z-toast)' as any,
             }}
           >
-            {snapshot.isEscalated ? '● ESCALATED' : '○ NOISE SUPPRESSED'}
-          </span>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-            Overdue: <strong className="font-mono-num" style={{ color: '#fff' }}>{snapshot.dpd} Days</strong>
+            {snapshot.isEscalated ? '▲ ESCALATED' : '○ NOISE SUPPRESSED'}
+          </div>
+          <div className="tabular-num" style={{ fontSize: '11px', color: 'var(--ink-1)' }}>
+            Overdue: <strong style={{ color: 'var(--ink-0)' }}>{snapshot.dpd} DPD</strong>
           </div>
         </div>
       </div>
 
-      {/* Three-Way Causal Attribution Breakdown */}
+      {/* 3. Causal Attribution Decomposition */}
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-          <span style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)' }}>
+          <span
+            style={{
+              fontSize: '11px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+              color: 'var(--ink-2)',
+              fontFamily: 'var(--font-mono)',
+            }}
+          >
             Causal Attribution Decomposition
           </span>
-          <span className="font-mono-num" style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-            200 MC Runs ({cb.durationMs}ms)
+          <span className="tabular-num" style={{ fontSize: '11px', color: 'var(--ink-2)' }}>
+            {cb.runs} MC Runs ({cb.durationMs.toFixed(1)}ms)
           </span>
         </div>
 
-        {/* Stacked Segment Bar with Soft Inner Glow */}
+        {/* Stacked Segment Bar with Individual Hoverability */}
         <div
           style={{
             display: 'flex',
-            height: '8px',
-            borderRadius: '999px',
+            height: '10px',
+            borderRadius: 'var(--radius-pill)',
             overflow: 'hidden',
-            backgroundColor: 'rgba(255, 255, 255, 0.06)',
-            marginBottom: '12px',
+            backgroundColor: 'var(--surface-2)',
+            marginBottom: 'var(--space-12)',
+            border: '1px solid var(--hairline)',
           }}
         >
-          <div style={{ width: `${idioPct}%`, backgroundColor: 'var(--color-idio)' }} title={`Idiosyncratic: ${idioPct}%`} />
-          <div style={{ width: `${inducedPct}%`, backgroundColor: 'var(--color-induced)' }} title={`Induced: ${inducedPct}%`} />
-          <div style={{ width: `${covPct}%`, backgroundColor: 'var(--color-covariate)' }} title={`Covariate: ${covPct}%`} />
+          <div
+            onMouseEnter={() => setHoveredSegment('idio')}
+            onMouseLeave={() => setHoveredSegment(null)}
+            style={{
+              width: `${snapshot.shareIdio * 100}%`,
+              backgroundColor: 'var(--idio)',
+              opacity: hoveredSegment && hoveredSegment !== 'idio' ? 0.4 : 1,
+              transition: 'opacity 120ms ease',
+              cursor: 'pointer',
+            }}
+            title={`Idiosyncratic (Personal): ${idioPct}% ${formatCiDelta(cb.idioCiLow, cb.idioCiHigh)}`}
+          />
+          <div
+            onMouseEnter={() => setHoveredSegment('induced')}
+            onMouseLeave={() => setHoveredSegment(null)}
+            style={{
+              width: `${snapshot.shareInduced * 100}%`,
+              backgroundColor: 'var(--induced)',
+              opacity: hoveredSegment && hoveredSegment !== 'induced' ? 0.4 : 1,
+              transition: 'opacity 120ms ease',
+              cursor: 'pointer',
+            }}
+            title={`Induced (Peer Transmission): ${inducedPct}% ${formatCiDelta(cb.inducedCiLow, cb.inducedCiHigh)}`}
+          />
+          <div
+            onMouseEnter={() => setHoveredSegment('covariate')}
+            onMouseLeave={() => setHoveredSegment(null)}
+            style={{
+              width: `${snapshot.shareCovariate * 100}%`,
+              backgroundColor: 'var(--covariate)',
+              opacity: hoveredSegment && hoveredSegment !== 'covariate' ? 0.4 : 1,
+              transition: 'opacity 120ms ease',
+              cursor: 'pointer',
+            }}
+            title={`Covariate (Ward Macro Factor): ${covPct}% ${formatCiDelta(cb.covariateCiLow, cb.covariateCiHigh)}`}
+          />
         </div>
 
-        {/* Split Metrics */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)' }}>
-              <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: 'var(--color-idio)' }} />
-              Idiosyncratic (Personal Shock)
+        {/* Color + Shape Paired Rows with ±N Confidence Intervals */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px' }}>
+          {/* Idiosyncratic: Circle ● */}
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '2px 0',
+            }}
+          >
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--ink-1)' }}>
+              <span style={{ color: 'var(--idio)', fontSize: '10px' }}>●</span>
+              <span>Idiosyncratic (Personal)</span>
             </span>
-            <div>
-              <span className="font-mono-num" style={{ fontWeight: 600, color: 'var(--color-idio)' }}>{idioPct}%</span>
-              <span className="font-mono-num" style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '6px' }}>
-                [{Math.round(cb.idioCiLow * 100)}%–{Math.round(cb.idioCiHigh * 100)}%]
-              </span>
+            <div className="tabular-num">
+              <span style={{ color: 'var(--ink-0)', fontWeight: 500 }}>{idioPct}%</span>{' '}
+              <span style={{ color: 'var(--ink-1)' }}>{formatCiDelta(cb.idioCiLow, cb.idioCiHigh)}</span>
             </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)' }}>
-              <span style={{ width: '7px', height: '7px', backgroundColor: 'var(--color-induced)', transform: 'rotate(45deg)', display: 'inline-block' }} />
-              Induced (Group Peer Transmission)
+          {/* Induced: Triangle ▲ */}
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '2px 0',
+            }}
+          >
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--ink-1)' }}>
+              <span style={{ color: 'var(--induced)', fontSize: '10px' }}>▲</span>
+              <span>Induced (Peer Transmission)</span>
             </span>
-            <div>
-              <span className="font-mono-num" style={{ fontWeight: 600, color: 'var(--color-induced)' }}>{inducedPct}%</span>
-              <span className="font-mono-num" style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '6px' }}>
-                [{Math.round(cb.inducedCiLow * 100)}%–{Math.round(cb.inducedCiHigh * 100)}%]
-              </span>
+            <div className="tabular-num">
+              <span style={{ color: 'var(--ink-0)', fontWeight: 500 }}>{inducedPct}%</span>{' '}
+              <span style={{ color: 'var(--ink-1)' }}>{formatCiDelta(cb.inducedCiLow, cb.inducedCiHigh)}</span>
             </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)' }}>
-              <span style={{ width: '7px', height: '7px', backgroundColor: 'var(--color-covariate)' }} />
-              Covariate (Ward Macro Factor)
+          {/* Covariate: Square ■ */}
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '2px 0',
+            }}
+          >
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--ink-1)' }}>
+              <span style={{ color: 'var(--covariate)', fontSize: '10px' }}>■</span>
+              <span>Covariate (Ward Macro Factor)</span>
             </span>
-            <div>
-              <span className="font-mono-num" style={{ fontWeight: 600, color: 'var(--color-covariate)' }}>{covPct}%</span>
-              <span className="font-mono-num" style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '6px' }}>
-                [{Math.round(cb.covariateCiLow * 100)}%–{Math.round(cb.covariateCiHigh * 100)}%]
-              </span>
+            <div className="tabular-num">
+              <span style={{ color: 'var(--ink-0)', fontWeight: 500 }}>{covPct}%</span>{' '}
+              <span style={{ color: 'var(--ink-1)' }}>{formatCiDelta(cb.covariateCiLow, cb.covariateCiHigh)}</span>
             </div>
           </div>
         </div>
 
-        {/* Transmission Origin Highlight */}
+        {/* Transmission Origin Highlight if present */}
         {snapshot.sourceBorrowerName && (
           <div
             style={{
-              marginTop: '12px',
-              padding: '10px 12px',
-              backgroundColor: 'rgba(244, 63, 94, 0.05)',
-              borderLeft: '3px solid var(--color-induced)',
-              borderRadius: '0 6px 6px 0',
+              marginTop: 'var(--space-12)',
+              padding: '8px 12px',
+              backgroundColor: 'var(--surface-2)',
+              borderLeft: '3px solid var(--induced)',
+              borderRadius: '0 var(--radius-control) var(--radius-control) 0',
               fontSize: '11px',
             }}
           >
-            <div style={{ color: 'var(--text-muted)', textTransform: 'uppercase', fontSize: '10px', fontWeight: 600 }}>
+            <div style={{ color: 'var(--ink-2)', textTransform: 'uppercase', fontSize: '10px', fontFamily: 'var(--font-mono)' }}>
               Primary Transmission Vector
             </div>
-            <div style={{ color: '#fff', marginTop: '2px' }}>
-              Induced from <strong style={{ color: 'var(--color-induced)' }}>{snapshot.sourceBorrowerName}</strong> via{' '}
-              <span style={{ textTransform: 'uppercase', color: 'var(--text-secondary)' }}>{snapshot.sourceChannel}</span> channel
+            <div style={{ color: 'var(--ink-0)', marginTop: '2px' }}>
+              Transmitted from <strong style={{ color: 'var(--induced)' }}>{snapshot.sourceBorrowerName}</strong> via{' '}
+              <span style={{ textTransform: 'uppercase', color: 'var(--ink-1)' }}>{snapshot.sourceChannel}</span> channel
             </div>
             {onSelectBorrowerId && snapshot.sourceBorrowerId && (
               <button
-                className="btn-action"
+                className="btn-secondary"
                 onClick={() => onSelectBorrowerId(snapshot.sourceBorrowerId!)}
-                style={{ height: '22px', fontSize: '10px', marginTop: '6px' }}
+                style={{ height: '22px', fontSize: '10px', marginTop: '6px', padding: '0 6px' }}
               >
                 Inspect Transmitter ({snapshot.sourceBorrowerName})
               </button>
@@ -318,89 +489,94 @@ export const AttributionDossier: React.FC<AttributionDossierProps> = ({
         )}
       </div>
 
-      {/* SVG Monte Carlo Probability Density Bell Curve */}
+      {/* 4. Monte Carlo Confidence Distribution Bell Curve */}
       <div
         style={{
-          padding: '12px',
-          backgroundColor: 'rgba(255, 255, 255, 0.02)',
-          borderRadius: '8px',
-          border: '1px solid var(--border-subtle)',
+          padding: 'var(--space-12)',
+          backgroundColor: 'var(--surface-2)',
+          borderRadius: 'var(--radius-control)',
+          border: '1px solid var(--hairline)',
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-          <span style={{ fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>
-            Monte Carlo Confidence Distribution (90% CI)
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+          <span
+            style={{
+              fontSize: '10px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+              color: 'var(--ink-2)',
+              fontFamily: 'var(--font-mono)',
+            }}
+          >
+            Monte Carlo Distribution (90% CI)
           </span>
-          <span className="font-mono-num" style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
+          <span className="tabular-num" style={{ fontSize: '11px', color: 'var(--ink-1)' }}>
             {(cb.stressCiLow * 100).toFixed(0)}% – {(cb.stressCiHigh * 100).toFixed(0)}%
           </span>
         </div>
 
-        <svg viewBox="0 0 200 48" style={{ width: '100%', height: '36px', overflow: 'visible' }}>
+        <svg viewBox="0 0 200 48" style={{ width: '100%', height: '36px', overflow: 'visible', display: 'block' }}>
           <defs>
-            <linearGradient id="mcGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--color-accent)" stopOpacity="0.35" />
-              <stop offset="100%" stopColor="var(--color-accent)" stopOpacity="0.0" />
+            <linearGradient id="bellGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--signal)" stopOpacity="0.25" />
+              <stop offset="100%" stopColor="var(--signal)" stopOpacity="0.0" />
             </linearGradient>
           </defs>
-          <polyline fill="none" stroke="var(--color-accent)" strokeWidth="1.5" points={curvePoints} />
-          <polygon fill="url(#mcGrad)" points={`0,45 ${curvePoints} 200,45`} />
+          <polyline fill="none" stroke="var(--signal)" strokeWidth="1.5" points={curvePoints} />
+          <polygon fill="url(#bellGrad)" points={`0,42 ${curvePoints} 200,42`} />
           {/* Mean marker */}
-          <line x1="100" y1="5" x2="100" y2="45" stroke="#fff" strokeWidth="1" strokeDasharray="2 2" />
+          <line x1="100" y1="6" x2="100" y2="42" stroke="var(--ink-0)" strokeWidth="1" strokeDasharray="2 2" />
         </svg>
       </div>
 
-      {/* Signal Contribution Breakdown */}
+      {/* 5. Ranked Eight-Signal Contribution Rows */}
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-          <span style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)' }}>
-            Signal Contributions
-          </span>
-          <button
-            onClick={() => setShowAllSignals(!showAllSignals)}
-            className="btn-action"
-            style={{ height: '20px', padding: '0 6px', fontSize: '10px', border: 'none', background: 'none' }}
+          <span
+            style={{
+              fontSize: '11px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+              color: 'var(--ink-2)',
+              fontFamily: 'var(--font-mono)',
+            }}
           >
-            {showAllSignals ? 'Top 4' : 'All 8'}
-          </button>
+            Signal Contributions (8 Signals)
+          </span>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           {Object.entries(snapshot.signalContributions)
             .sort((a, b) => b[1] - a[1])
-            .slice(0, showAllSignals ? 8 : 4)
-            .map(([signalName, contribution]) => {
-              const labelMap: Record<string, string> = {
-                crossPayment: 'Cross-Payment (Proxy EMI)',
-                attendance: 'Meeting Attendance Absence',
-                instalmentDelay: 'Instalment Delay (DPD)',
-                multiLender: 'Multi-Lender Exposure',
-                dtiBurden: 'DTI Income Strain',
-                loanCycle: 'Loan Cycle Fatigue',
-                socialDisruption: 'JLG Social Breakdown',
-                seasonalMismatch: 'Seasonal Cashflow Disruption',
-              };
+            .map(([signalKey, contribution]) => {
+              const label = SIGNAL_LABELS[signalKey] || signalKey;
+              const pct = (contribution * 100).toFixed(1);
+              const barWidthPct = Math.min(100, Math.max(2, contribution * 300));
 
-              const pct = Math.round(contribution * 1000) / 10;
               return (
-                <div key={signalName} style={{ display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '11px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
-                    <span>{labelMap[signalName] || signalName}</span>
-                    <span className="font-mono-num" style={{ color: '#fff' }}>+{pct}%</span>
+                <div key={signalKey} style={{ display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '11px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: 'var(--ink-1)' }}>{label}</span>
+                    <span className="tabular-num" style={{ color: 'var(--ink-0)', fontWeight: 500 }}>
+                      +{pct}%
+                    </span>
                   </div>
+
+                  {/* Magnitude Bar strictly in var(--ink-2), never accent color */}
                   <div
                     style={{
                       height: '3px',
-                      backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                      borderRadius: '999px',
+                      backgroundColor: 'var(--surface-3)',
+                      borderRadius: 'var(--radius-pill)',
                       overflow: 'hidden',
                     }}
                   >
                     <div
                       style={{
                         height: '100%',
-                        width: `${Math.min(100, pct * 4)}%`,
-                        backgroundColor: signalName === 'crossPayment' ? 'var(--color-induced)' : 'var(--text-secondary)',
+                        width: `${barWidthPct}%`,
+                        backgroundColor: 'var(--ink-2)',
+                        borderRadius: 'var(--radius-pill)',
                       }}
                     />
                   </div>
@@ -410,22 +586,17 @@ export const AttributionDossier: React.FC<AttributionDossierProps> = ({
         </div>
       </div>
 
-      {/* Action Footer: Launch Intervention Simulator */}
+      {/* 6. Primary Action: Simulate Intervention Trajectory */}
       {onOpenInterventionModal && (
-        <div style={{ marginTop: 'auto', paddingTop: '12px', borderTop: '1px solid var(--border-subtle)' }}>
+        <div style={{ marginTop: 'auto', paddingTop: 'var(--space-12)', borderTop: '1px solid var(--hairline)' }}>
           <button
-            className="btn-action active"
+            className="btn-primary"
             onClick={onOpenInterventionModal}
             style={{
               width: '100%',
-              height: '36px',
-              borderRadius: '8px',
+              height: '34px',
               fontSize: '13px',
-              fontWeight: 600,
-              backgroundColor: '#fff',
-              color: '#000',
-              border: 'none',
-              boxShadow: '0 2px 10px rgba(255, 255, 255, 0.15)',
+              fontWeight: 500,
             }}
           >
             Simulate Intervention Trajectory
