@@ -139,7 +139,12 @@ export function generateSyntheticPortfolio(seed = 481516): GeneratedPortfolio {
       const bId = `b-${String(borrowerCounter).padStart(3, '0')}`;
       const firstName = rng.pickOne(INDIAN_FIRST_NAMES);
       const initial = rng.pickOne(INDIAN_INITIALS);
-      const displayName = `${firstName} ${initial}`;
+      let displayName = `${firstName} ${initial}`;
+      if (bId === 'b-411') {
+        displayName = 'Lakshmi R.';
+      } else if (bId === 'b-413') {
+        displayName = 'Sunita K.';
+      }
       const occupation = rng.pickOne(OCCUPATIONS);
 
       const loanCycle = rng.intBetween(1, 5);

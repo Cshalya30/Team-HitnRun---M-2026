@@ -193,9 +193,9 @@ export function simulatePortfolioContagion(
           }
         }
 
-        if (neighborStress > 0.30) {
+        if (neighborStress > 0.20) {
           // Transmission strength scales with neighbor's excess stress
-          const trans = (neighborStress - 0.30) * gN[i].weight * 0.55;
+          const trans = (neighborStress - 0.20) * gN[i].weight * 0.88;
           incomingInduced += trans;
           if (trans > maxContagion) {
             maxContagion = trans;
@@ -249,7 +249,7 @@ export function simulatePortfolioContagion(
 
       // Dampen and retain part of prior induced stress (memory effect)
       const priorInduced = inducedStress.get(brw.id) ?? 0;
-      const combinedInduced = Math.min(0.90, priorInduced * 0.65 + incomingInduced);
+      const combinedInduced = Math.min(0.92, priorInduced * 0.72 + incomingInduced);
 
       nextInducedStress.set(brw.id, combinedInduced);
       nextUpstream.set(brw.id, strongestSource || upstreamSource.get(brw.id) || null);

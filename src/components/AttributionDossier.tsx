@@ -31,6 +31,17 @@ const SIGNAL_LABELS: Record<string, string> = {
   seasonalMismatch: 'Seasonal Cashflow Disruption',
 };
 
+const SIGNAL_COLORS: Record<string, string> = {
+  crossPayment: 'var(--induced)',
+  socialDisruption: 'var(--induced)',
+  attendance: 'var(--idio)',
+  instalmentDelay: 'var(--idio)',
+  loanCycle: 'var(--idio)',
+  dtiBurden: 'var(--idio)',
+  multiLender: 'var(--idio)',
+  seasonalMismatch: 'var(--covariate)',
+};
+
 const formatINR = (val: number): string => {
   return '₹' + Math.round(val).toLocaleString('en-IN');
 };
@@ -168,13 +179,13 @@ export const AttributionDossier: React.FC<AttributionDossierProps> = ({
   const inducedPct = (snapshot.shareInduced * 100).toFixed(1);
   const covPct = (snapshot.shareCovariate * 100).toFixed(1);
 
-  // SVG Monte Carlo Bell Curve coordinates
+  // SVG Monte Carlo Bell Curve coordinates (minimum 60px render height)
   const curvePoints = Array.from({ length: 41 })
     .map((_, i) => {
       const x = i;
       const normX = (x - 20) / 6;
       const y = Math.exp(-0.5 * normX * normX);
-      return `${(x / 40) * 200},${42 - y * 36}`;
+      return `${(x / 40) * 200},${58 - y * 50}`;
     })
     .join(' ');
 
@@ -515,17 +526,17 @@ export const AttributionDossier: React.FC<AttributionDossierProps> = ({
           </span>
         </div>
 
-        <svg viewBox="0 0 200 48" style={{ width: '100%', height: '36px', overflow: 'visible', display: 'block' }}>
+        <svg viewBox="0 0 200 64" style={{ width: '100%', height: '60px', overflow: 'visible', display: 'block' }}>
           <defs>
             <linearGradient id="bellGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--signal)" stopOpacity="0.25" />
+              <stop offset="0%" stopColor="var(--signal)" stopOpacity="0.30" />
               <stop offset="100%" stopColor="var(--signal)" stopOpacity="0.0" />
             </linearGradient>
           </defs>
-          <polyline fill="none" stroke="var(--signal)" strokeWidth="1.5" points={curvePoints} />
-          <polygon fill="url(#bellGrad)" points={`0,42 ${curvePoints} 200,42`} />
+          <polyline fill="none" stroke="var(--signal)" strokeWidth="1.75" points={curvePoints} />
+          <polygon fill="url(#bellGrad)" points={`0,58 ${curvePoints} 200,58`} />
           {/* Mean marker */}
-          <line x1="100" y1="6" x2="100" y2="42" stroke="var(--ink-0)" strokeWidth="1" strokeDasharray="2 2" />
+          <line x1="100" y1="8" x2="100" y2="58" stroke="var(--ink-0)" strokeWidth="1" strokeDasharray="2 2" />
         </svg>
       </div>
 
@@ -551,7 +562,8 @@ export const AttributionDossier: React.FC<AttributionDossierProps> = ({
             .map(([signalKey, contribution]) => {
               const label = SIGNAL_LABELS[signalKey] || signalKey;
               const pct = (contribution * 100).toFixed(1);
-              const barWidthPct = Math.min(100, Math.max(2, contribution * 300));
+              const barWidthPct = Math.min(100, Math.max(3, contribution * 300));
+              const signalColor = SIGNAL_COLORS[signalKey] || 'var(--ink-0)';
 
               return (
                 <div key={signalKey} style={{ display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '11px' }}>
@@ -562,10 +574,10 @@ export const AttributionDossier: React.FC<AttributionDossierProps> = ({
                     </span>
                   </div>
 
-                  {/* Magnitude Bar strictly in var(--ink-2), never accent color */}
+                  {/* Magnitude Bar filled at full opacity in matching semantic colour, min 3px height (Part 5) */}
                   <div
                     style={{
-                      height: '3px',
+                      height: '4px',
                       backgroundColor: 'var(--surface-3)',
                       borderRadius: 'var(--radius-pill)',
                       overflow: 'hidden',
@@ -575,7 +587,7 @@ export const AttributionDossier: React.FC<AttributionDossierProps> = ({
                       style={{
                         height: '100%',
                         width: `${barWidthPct}%`,
-                        backgroundColor: 'var(--ink-2)',
+                        backgroundColor: signalColor,
                         borderRadius: 'var(--radius-pill)',
                       }}
                     />

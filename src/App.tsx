@@ -146,6 +146,19 @@ export const App: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Handle URL scenario='lakshmi-shock' or 'lakshmi_shock'
+  useEffect(() => {
+    if (urlState.scenario === 'lakshmi-shock' || urlState.scenario === 'lakshmi_shock') {
+      setActiveShock({
+        type: 'borrower',
+        targetId: 'b-411',
+        targetName: 'Lakshmi R. (Medical Shock)',
+        startWeek: 19,
+        magnitude: 0.92,
+      });
+    }
+  }, [urlState.scenario]);
+
   return (
     <div className="cockpit-container">
       {/* 1. TOP BAR (56px, sticky header z-index 20) */}
@@ -223,6 +236,35 @@ export const App: React.FC = () => {
             </button>
           </div>
 
+          {/* 6. Demo Shortcut Button (Part 6: Week 22, Sunita b-413, Lakshmi Shock) */}
+          <button
+            className="btn-secondary"
+            onClick={() => {
+              setSeed(481516);
+              setWeek(22);
+              setBorrowerId('b-413');
+              setScenario('lakshmi-shock');
+              setActiveShock({
+                type: 'borrower',
+                targetId: 'b-411',
+                targetName: 'Lakshmi R. (Medical Shock)',
+                startWeek: 19,
+                magnitude: 0.92,
+              });
+            }}
+            style={{
+              height: '28px',
+              fontSize: '11px',
+              fontFamily: 'var(--font-mono)',
+              borderColor: 'var(--focus)',
+              color: 'var(--focus)',
+              padding: '0 var(--space-8)',
+            }}
+            title="Jump directly to demo state: Week 22, Sunita K. (b-413), Lakshmi Shock"
+          >
+            ⚡ Demo: Sunita W22
+          </button>
+
           <EvidenceExport
             seed={urlState.seed}
             currentWeek={urlState.week}
@@ -270,7 +312,8 @@ export const App: React.FC = () => {
               currentWeekSnapshots={currentWeekSnapshots}
               selectedBorrowerId={urlState.borrowerId || null}
               onSelectBorrower={id => setBorrowerId(id)}
-              cascadeOriginBorrowerId={activeShock?.type === 'borrower' ? activeShock.targetId : 'b-001'}
+              cascadeOriginBorrowerId={activeShock?.type === 'borrower' ? activeShock.targetId : 'b-411'}
+              currentWeek={urlState.week}
             />
           </div>
 

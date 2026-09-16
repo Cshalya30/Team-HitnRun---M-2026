@@ -14,13 +14,15 @@ export function useUrlState(defaults: UrlState) {
       const params = new URLSearchParams(window.location.search);
       const seedParam = params.get('seed');
       const weekParam = params.get('week');
-      const borrowerParam = params.get('borrower');
+      const borrowerParam = params.get('selected') || params.get('borrower');
+      const resolvedBorrowerId =
+        borrowerParam?.toLowerCase() === 'sunita' ? 'b-413' : borrowerParam || defaults.borrowerId;
       const scenarioParam = params.get('scenario');
 
       return {
         seed: seedParam ? parseInt(seedParam, 10) : defaults.seed,
         week: weekParam ? Math.min(78, Math.max(1, parseInt(weekParam, 10))) : defaults.week,
-        borrowerId: borrowerParam || defaults.borrowerId,
+        borrowerId: resolvedBorrowerId,
         scenario: scenarioParam || defaults.scenario,
       };
     } catch (err) {

@@ -21,7 +21,7 @@ export const ScenarioDrawer: React.FC<ScenarioDrawerProps> = ({
   onApplyPolicyPreset,
 }) => {
   const isPolicyActive = activeShock?.targetName?.includes('Refinancing') ?? false;
-  const isLakshmiActive = activeShock?.type === 'borrower' && activeShock.targetId === 'b-001' && !isPolicyActive;
+  const isLakshmiActive = activeShock?.type === 'borrower' && activeShock.targetId === 'b-411' && !isPolicyActive;
   const isWardActive = activeShock?.type === 'ward';
   const isOfficerActive = activeShock?.type === 'officer';
 
@@ -62,10 +62,10 @@ export const ScenarioDrawer: React.FC<ScenarioDrawerProps> = ({
           onClick={() => {
             onApplyShock({
               type: 'borrower',
-              targetId: 'b-001',
+              targetId: 'b-411',
               targetName: 'Lakshmi R. (Medical Shock)',
-              startWeek: currentWeek,
-              magnitude: 0.9,
+              startWeek: 19,
+              magnitude: 0.92,
             });
           }}
           style={{

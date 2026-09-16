@@ -22,32 +22,21 @@ interface CanvasGraphProps {
   hasError?: boolean;
   emptyFilterMessage?: string | null;
   onClearFilter?: () => void;
+  currentWeek?: number;
 }
 
 interface NodeLayout {
   id: string;
   x: number;
   y: number;
-  radius: number;
   borrower: Borrower;
-}
-
-interface ClusterHull {
-  name: string;
-  type: 'jlg' | 'centre' | 'ward';
-  cx: number;
-  cy: number;
-  radius: number;
 }
 
 const COLOR_IDIO = '#E8C468';
 const COLOR_INDUCED = '#E05A6B';
 const COLOR_COVARIATE = '#4FA8D8';
-const COLOR_SIGNAL = '#7BE0B0';
-const COLOR_BASE = '#1A1F2B';
 const COLOR_FOCUS = '#8B7CFF';
 const COLOR_HAIRLINE = '#242B3A';
-const COLOR_INK_2 = '#6C7689';
 
 export const CanvasGraph: React.FC<CanvasGraphProps> = ({
   wards,
@@ -63,6 +52,7 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
   hasError = false,
   emptyFilterMessage = null,
   onClearFilter,
+  currentWeek,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -70,10 +60,10 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
   const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
   const isDraggingRef = useRef(false);
   const dragStartRef = useRef({ x: 0, y: 0 });
-  const hasPannedOrZoomed = useRef(false);
+  const hasUserPannedOrZoomed = useRef(false);
 
   const nodesRef = useRef<Map<string, NodeLayout>>(new Map());
-  const hullsRef = useRef<ClusterHull[]>([]);
+  const boundsRef = useRef({ minX: 0, minY: 0, maxX: 1200, maxY: 800 });
   const edgeListRef = useRef<Array<{ src: NodeLayout; dst: NodeLayout; kind: Edge['kind']; weight: number }>>([]);
 
   const [hoveredNode, setHoveredNode] = useState<{
@@ -83,80 +73,53 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
     snapshot: StressSnapshot;
   } | null>(null);
 
-  // 1. Cluster Layout Generation (Flower / Ring structures by JLG and Centre)
+  // 1. Data-bound Node Layout Generation (425 distinct nodes in cluster topology)
   useEffect(() => {
     const nodeMap = new Map<string, NodeLayout>();
-    const hulls: ClusterHull[] = [];
 
-    const universeWidth = 1400;
-    const universeHeight = 900;
-    const centerX = universeWidth / 2;
-    const centerY = universeHeight / 2;
+    // Space wards evenly in 2x2 quadrants to fill canvas viewport naturally
+    const wardCenters: Record<string, { cx: number; cy: number }> = {
+      'w-01': { cx: 320, cy: 240 }, // Dharavi East (Top-Left)
+      'w-02': { cx: 880, cy: 240 }, // Kurla West (Top-Right)
+      'w-03': { cx: 320, cy: 620 }, // Govandi North (Bottom-Left)
+      'w-04': { cx: 880, cy: 620 }, // Chembur South (Bottom-Right)
+    };
 
-    const wardOffsets = [
-      { x: centerX - 340, y: centerY - 210 },
-      { x: centerX + 340, y: centerY - 210 },
-      { x: centerX - 340, y: centerY + 210 },
-      { x: centerX + 340, y: centerY + 210 },
-    ];
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
 
-    wards.forEach((ward, wIdx) => {
-      const wardPos = wardOffsets[wIdx] || { x: centerX, y: centerY };
-      hulls.push({
-        name: ward.name,
-        type: 'ward',
-        cx: wardPos.x,
-        cy: wardPos.y,
-        radius: 295,
-      });
-
+    wards.forEach(ward => {
+      const wCenter = wardCenters[ward.id] || { cx: 600, cy: 400 };
       const wardCentres = centres.filter(c => c.wardId === ward.id);
-      const centreRadiusX = 185;
-      const centreRadiusY = 135;
 
       wardCentres.forEach((centre, cIdx) => {
+        // Distribute 6 centres in an ellipse around ward center
         const cAngle = (cIdx / wardCentres.length) * Math.PI * 2 - Math.PI / 2;
-        const cX = wardPos.x + Math.cos(cAngle) * centreRadiusX;
-        const cY = wardPos.y + Math.sin(cAngle) * centreRadiusY;
-
-        hulls.push({
-          name: centre.name,
-          type: 'centre',
-          cx: cX,
-          cy: cY,
-          radius: 76,
-        });
+        const cX = wCenter.cx + Math.cos(cAngle) * 165;
+        const cY = wCenter.cy + Math.sin(cAngle) * 115;
 
         const centreJlgs = jlgs.filter(j => j.centreId === centre.id);
-        const jlgRadius = 38;
-
         centreJlgs.forEach((jlg, jIdx) => {
+          // Distribute JLGs around each centre
           const jAngle = (jIdx / centreJlgs.length) * Math.PI * 2;
-          const jX = cX + Math.cos(jAngle) * jlgRadius;
-          const jY = cY + Math.sin(jAngle) * jlgRadius;
+          const jX = cX + Math.cos(jAngle) * 44;
+          const jY = cY + Math.sin(jAngle) * 44;
 
-          hulls.push({
-            name: jlg.name,
-            type: 'jlg',
-            cx: jX,
-            cy: jY,
-            radius: 24,
-          });
-
-          // Flower ring of 5 borrowers per JLG
+          // 5 borrowers per JLG arranged in a distinct ring (radius 18px)
           const members = borrowers.filter(b => b.jlgId === jlg.id);
-          const memberRadius = 14;
-
           members.forEach((borrower, mIdx) => {
             const mAngle = (mIdx / members.length) * Math.PI * 2 - Math.PI / 2;
-            const bX = jX + Math.cos(mAngle) * memberRadius;
-            const bY = jY + Math.sin(mAngle) * memberRadius;
+            const bX = jX + Math.cos(mAngle) * 18;
+            const bY = jY + Math.sin(mAngle) * 18;
+
+            if (bX < minX) minX = bX;
+            if (bX > maxX) maxX = bX;
+            if (bY < minY) minY = bY;
+            if (bY > maxY) maxY = bY;
 
             nodeMap.set(borrower.id, {
               id: borrower.id,
               x: bX,
               y: bY,
-              radius: 5,
               borrower,
             });
           });
@@ -165,8 +128,9 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
     });
 
     nodesRef.current = nodeMap;
-    hullsRef.current = hulls;
+    boundsRef.current = { minX, minY, maxX, maxY };
 
+    // Resolve Guarantee Edges
     const resolvedEdges: Array<{ src: NodeLayout; dst: NodeLayout; kind: Edge['kind']; weight: number }> = [];
     edges.forEach(e => {
       if (e.dstBorrowerId) {
@@ -178,38 +142,52 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
       }
     });
     edgeListRef.current = resolvedEdges;
-
-    if (containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      const scaleX = rect.width / universeWidth;
-      const scaleY = rect.height / universeHeight;
-      const initialScale = Math.min(scaleX, scaleY) * 0.96;
-      setTransform({
-        x: (rect.width - universeWidth * initialScale) / 2,
-        y: (rect.height - universeHeight * initialScale) / 2,
-        scale: initialScale,
-      });
-      hasPannedOrZoomed.current = false;
-    }
   }, [wards, centres, jlgs, borrowers, edges]);
 
-  // Center on Selected Borrower
-  useEffect(() => {
-    if (selectedBorrowerId && containerRef.current) {
-      const node = nodesRef.current.get(selectedBorrowerId);
-      if (node) {
-        const rect = containerRef.current.getBoundingClientRect();
-        setTransform(prev => ({
-          ...prev,
-          x: rect.width / 2 - node.x * prev.scale,
-          y: rect.height / 2 - node.y * prev.scale,
-        }));
-        hasPannedOrZoomed.current = true;
-      }
-    }
-  }, [selectedBorrowerId]);
+  // 2. Viewport Auto-Fitting (Part 4 of bugfix: 40px padding, no dead space)
+  const fitToViewport = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
 
-  // 2. Render Canvas (60fps)
+    const { minX, minY, maxX, maxY } = boundsRef.current;
+    const contentW = maxX - minX;
+    const contentH = maxY - minY;
+    if (contentW <= 0 || contentH <= 0) return;
+
+    const padding = 40;
+    const scale = Math.min(
+      (rect.width - padding * 2) / contentW,
+      (rect.height - padding * 2) / contentH
+    );
+
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+
+    setTransform({
+      scale,
+      x: rect.width / 2 - centerX * scale,
+      y: rect.height / 2 - centerY * scale,
+    });
+    hasUserPannedOrZoomed.current = false;
+  }, []);
+
+  // Auto-fit on initial mount, window resize, and when week changes (if not panned)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fitToViewport();
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [fitToViewport]);
+
+  useEffect(() => {
+    if (!hasUserPannedOrZoomed.current) {
+      fitToViewport();
+    }
+  }, [currentWeek, fitToViewport]);
+
+  // 3. Render Canvas (60fps, crisp DPI)
   const renderCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -229,47 +207,17 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, width, height);
 
-    // Canvas surface background: #12151D (--surface-1)
+    // Deep cockpit background: #12151D (--surface-1)
     ctx.fillStyle = '#12151D';
     ctx.fillRect(0, 0, width, height);
 
     ctx.translate(transform.x, transform.y);
     ctx.scale(transform.scale, transform.scale);
 
-    // 2.1 Cluster Hulls (flower/ring structure)
-    hullsRef.current.forEach(hull => {
-      if (hull.type === 'ward') {
-        ctx.beginPath();
-        ctx.arc(hull.cx, hull.cy, hull.radius, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(11, 13, 18, 0.4)';
-        ctx.fill();
-        ctx.strokeStyle = COLOR_HAIRLINE;
-        ctx.lineWidth = 1;
-        ctx.stroke();
-
-        ctx.font = '500 11px "JetBrains Mono", monospace';
-        ctx.fillStyle = COLOR_INK_2;
-        ctx.textAlign = 'center';
-        ctx.fillText(hull.name.toUpperCase(), hull.cx, hull.cy - hull.radius + 20);
-      } else if (hull.type === 'centre') {
-        ctx.beginPath();
-        ctx.arc(hull.cx, hull.cy, hull.radius, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(36, 43, 58, 0.5)';
-        ctx.lineWidth = 0.75;
-        ctx.stroke();
-      } else if (hull.type === 'jlg') {
-        ctx.beginPath();
-        ctx.arc(hull.cx, hull.cy, hull.radius, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(36, 43, 58, 0.3)';
-        ctx.lineWidth = 0.5;
-        ctx.stroke();
-      }
-    });
-
-    // 2.2 Edges
-    const edges = edgeListRef.current;
-    for (let i = 0; i < edges.length; i++) {
-      const { src, dst, kind } = edges[i];
+    // 3.1 Guarantee Edges (Part 3: 8-15% default, 60%+ along selected borrower path)
+    const allEdges = edgeListRef.current;
+    for (let i = 0; i < allEdges.length; i++) {
+      const { src, dst, kind } = allEdges[i];
       const isConnectedToSelected = selectedBorrowerId && (src.id === selectedBorrowerId || dst.id === selectedBorrowerId);
 
       ctx.beginPath();
@@ -277,62 +225,81 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
       ctx.lineTo(dst.x, dst.y);
 
       if (isConnectedToSelected) {
-        ctx.strokeStyle = kind === 'guarantee' ? '#EAEDF5' : 'rgba(139, 124, 255, 0.6)';
-        ctx.lineWidth = 1.5;
+        // Boost opacity to 85%+ on edges connected to selected borrower
+        ctx.strokeStyle = 'rgba(234, 237, 245, 0.85)';
+        ctx.lineWidth = 1.75;
       } else if (kind === 'guarantee') {
-        ctx.strokeStyle = 'rgba(36, 43, 58, 0.5)';
-        ctx.lineWidth = 0.8;
+        // Default guarantee edge: 12% opacity hairline
+        ctx.strokeStyle = 'rgba(167, 175, 194, 0.12)';
+        ctx.lineWidth = 1.0;
       } else {
-        ctx.strokeStyle = 'rgba(36, 43, 58, 0.2)';
+        // Subtle income & social cross-group ties
+        ctx.strokeStyle = 'rgba(108, 118, 137, 0.04)';
         ctx.lineWidth = 0.5;
       }
       ctx.stroke();
     }
 
-    // 2.3 Nodes: Color + Shape Pairing (Part 5)
+    // 3.2 Borrowers (Part 2: 425 data-bound nodes, min radius 3px to 9px by stress, circle/triangle/square)
     nodesRef.current.forEach(node => {
       const snapshot = currentWeekSnapshots.get(node.id);
       const isSelected = node.id === selectedBorrowerId;
       const isOrigin = node.id === cascadeOriginBorrowerId;
-      const stress = snapshot?.latentStress ?? 0.1;
-      const dominantType = snapshot?.dominantStressType ?? 'unflagged';
 
-      let nodeColor = COLOR_BASE;
-      if (dominantType === 'idio') nodeColor = COLOR_IDIO;
-      else if (dominantType === 'induced') nodeColor = COLOR_INDUCED;
-      else if (dominantType === 'covariate') nodeColor = COLOR_COVARIATE;
+      const stress = snapshot?.latentStress ?? node.borrower.baselineStress;
+      const shareIdio = snapshot?.shareIdio ?? 0.85;
+      const shareInduced = snapshot?.shareInduced ?? 0.0;
+      const shareCov = snapshot?.shareCovariate ?? 0.15;
 
-      // Size scaled to stress magnitude (capped between 4px and 9px)
-      const r = Math.max(4, Math.min(9, 4 + stress * 5));
+      // Determine Dominant Shape
+      let dominantType: 'idio' | 'induced' | 'covariate' = 'idio';
+      if (shareInduced > shareIdio && shareInduced > shareCov) {
+        dominantType = 'induced';
+      } else if (shareCov > shareIdio && shareCov > shareInduced) {
+        dominantType = 'covariate';
+      }
+
+      // Radius: strictly minimum 3px, scaled up to 9px by latent stress
+      const r = Math.max(3, Math.min(9, 3 + stress * 6));
+
+      // Semantic Color Selection
+      let color = COLOR_IDIO;
+      if (dominantType === 'induced') color = COLOR_INDUCED;
+      else if (dominantType === 'covariate') color = COLOR_COVARIATE;
 
       ctx.save();
       ctx.translate(node.x, node.y);
 
       ctx.beginPath();
       if (dominantType === 'induced') {
-        // Triangle (▲) for Induced
-        const h = r * 1.3;
+        // Equilateral triangle (▲)
+        const h = r * 1.35;
         ctx.moveTo(0, -h);
-        ctx.lineTo(h, h * 0.7);
-        ctx.lineTo(-h, h * 0.7);
+        ctx.lineTo(h * 0.95, h * 0.65);
+        ctx.lineTo(-h * 0.95, h * 0.65);
         ctx.closePath();
       } else if (dominantType === 'covariate') {
-        // Square (■) for Covariate
-        ctx.rect(-r * 0.9, -r * 0.9, r * 1.8, r * 1.8);
+        // Rounded square (■)
+        const s = r * 1.5;
+        ctx.rect(-s / 2, -s / 2, s, s);
       } else {
-        // Circle (●) for Idiosyncratic or Unflagged
+        // Circle (●)
         ctx.arc(0, 0, r, 0, Math.PI * 2);
       }
 
-      ctx.fillStyle = nodeColor;
+      // Fully visible node fill (minimum 0.55 opacity even when calm, 1.0 when stressed)
+      const fillAlpha = Math.min(1.0, 0.55 + stress * 0.45);
+      ctx.fillStyle = color;
+      ctx.globalAlpha = fillAlpha;
       ctx.fill();
+      ctx.globalAlpha = 1.0;
 
       // Hairline border
       ctx.strokeStyle = COLOR_HAIRLINE;
       ctx.lineWidth = 1;
       ctx.stroke();
 
-      // Selected Node: Persistent Ring in --focus (#8B7CFF), never a color change!
+      // Selected Node: Persistent Ring in --focus (#8B7CFF), never a color change
       if (isSelected) {
         ctx.beginPath();
         ctx.arc(0, 0, r + 5, 0, Math.PI * 2);
@@ -341,10 +308,10 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
         ctx.stroke();
       }
 
-      // Cascade Origin Halo
+      // Cascade Origin Halo if applicable
       if (isOrigin) {
         ctx.beginPath();
-        ctx.arc(0, 0, r + 8, 0, Math.PI * 2);
+        ctx.arc(0, 0, r + 7, 0, Math.PI * 2);
         ctx.strokeStyle = COLOR_INDUCED;
         ctx.lineWidth = 1.5;
         ctx.setLineDash([3, 3]);
@@ -368,7 +335,7 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
     return () => cancelAnimationFrame(animId);
   }, [renderCanvas]);
 
-  // Pan and Zoom
+  // Pan and Zoom Interaction Handlers
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (e.button === 0) {
       isDraggingRef.current = true;
@@ -381,7 +348,7 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
     if (!canvas) return;
 
     if (isDraggingRef.current) {
-      hasPannedOrZoomed.current = true;
+      hasUserPannedOrZoomed.current = true;
       setTransform(prev => ({
         ...prev,
         x: e.clientX - dragStartRef.current.x,
@@ -395,10 +362,14 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
     const mouseCanvasY = (e.clientY - rect.top - transform.y) / transform.scale;
 
     let found: NodeLayout | null = null;
+    let minD2 = 256; // 16px hover radius
+
     nodesRef.current.forEach(node => {
       const dx = node.x - mouseCanvasX;
       const dy = node.y - mouseCanvasY;
-      if (dx * dx + dy * dy < 144) {
+      const d2 = dx * dx + dy * dy;
+      if (d2 < minD2) {
+        minD2 = d2;
         found = node;
       }
     });
@@ -429,9 +400,9 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
 
   const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
     e.preventDefault();
-    hasPannedOrZoomed.current = true;
+    hasUserPannedOrZoomed.current = true;
     const zoomFactor = e.deltaY < 0 ? 1.08 : 0.92;
-    const newScale = Math.min(3.0, Math.max(0.35, transform.scale * zoomFactor));
+    const newScale = Math.min(3.5, Math.max(0.25, transform.scale * zoomFactor));
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -449,100 +420,105 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
   const handleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const mouseCanvasX = (e.clientX - rect.left - transform.x) / transform.scale;
-    const mouseCanvasY = (e.clientY - rect.top - transform.y) / transform.scale;
 
-    let selected: NodeLayout | null = null;
+    const rect = canvas.getBoundingClientRect();
+    const clickCanvasX = (e.clientX - rect.left - transform.x) / transform.scale;
+    const clickCanvasY = (e.clientY - rect.top - transform.y) / transform.scale;
+
+    let closest: NodeLayout | null = null;
+    let minDistance = 256;
+
     nodesRef.current.forEach(node => {
-      const dx = node.x - mouseCanvasX;
-      const dy = node.y - mouseCanvasY;
-      if (dx * dx + dy * dy < 144) {
-        selected = node;
+      const dx = node.x - clickCanvasX;
+      const dy = node.y - clickCanvasY;
+      const dist = dx * dx + dy * dy;
+      if (dist < minDistance) {
+        minDistance = dist;
+        closest = node;
       }
     });
 
-    if (selected) {
-      onSelectBorrower((selected as NodeLayout).id);
+    if (closest) {
+      onSelectBorrower((closest as NodeLayout).id);
     }
   };
 
-  const handleResetZoom = () => {
-    if (containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      const universeWidth = 1400;
-      const universeHeight = 900;
-      const scaleX = rect.width / universeWidth;
-      const scaleY = rect.height / universeHeight;
-      const initialScale = Math.min(scaleX, scaleY) * 0.96;
-      setTransform({
-        x: (rect.width - universeWidth * initialScale) / 2,
-        y: (rect.height - universeHeight * initialScale) / 2,
-        scale: initialScale,
-      });
-      hasPannedOrZoomed.current = false;
-    }
-  };
-
-  // State 1: Error fallback table (never blank)
-  if (hasError) {
+  // State 1: Loading Skeleton (no shimmer)
+  if (isLoading) {
     return (
       <div
-        className="surface-panel"
+        ref={containerRef}
         style={{
           width: '100%',
           height: '100%',
-          minHeight: '520px',
+          backgroundColor: '#12151D',
+          borderRadius: 'var(--radius-table)',
+          border: '1px solid var(--hairline)',
           display: 'flex',
-          flexDirection: 'column',
-          gap: 'var(--space-12)',
-          color: 'var(--ink-0)',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'var(--ink-2)',
+          fontSize: '12px',
         }}
       >
-        <div style={{ color: 'var(--danger)', fontWeight: 600 }}>Graph Canvas Initialization Error</div>
-        <p style={{ fontSize: '12px', color: 'var(--ink-1)' }}>
-          The interactive visualization canvas could not be loaded. Displaying tabular fallback of active portfolio:
-        </p>
-        <div style={{ overflowY: 'auto', flex: 1 }}>
-          <table className="tremor-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Borrower</th>
-                <th>Centre</th>
-                <th>Stress Score</th>
-              </tr>
-            </thead>
-            <tbody>
-              {borrowers.slice(0, 15).map(b => (
-                <tr key={b.id} onClick={() => onSelectBorrower(b.id)} style={{ cursor: 'pointer' }}>
-                  <td className="tabular-num">{b.id.toUpperCase()}</td>
-                  <td>{b.displayName}</td>
-                  <td>{b.centreId}</td>
-                  <td className="tabular-num">{((currentWeekSnapshots.get(b.id)?.latentStress ?? 0) * 100).toFixed(1)}%</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        Initializing network canvas topology...
       </div>
     );
   }
 
-  // State 2: Empty Filter State
-  if (emptyFilterMessage) {
+  // State 2: Error State
+  if (hasError) {
     return (
       <div
-        className="surface-panel"
         style={{
           width: '100%',
           height: '100%',
-          minHeight: '520px',
+          backgroundColor: '#12151D',
+          borderRadius: 'var(--radius-table)',
+          border: '1px solid var(--danger)',
+          padding: 'var(--space-24)',
+          overflowY: 'auto',
+        }}
+      >
+        <div style={{ color: 'var(--danger)', fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>
+          Canvas Initialization Failed
+        </div>
+        <table className="dense-table" style={{ width: '100%' }}>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Borrower</th>
+              <th>Ward</th>
+            </tr>
+          </thead>
+          <tbody>
+            {borrowers.slice(0, 10).map(b => (
+              <tr key={b.id}>
+                <td>{b.id}</td>
+                <td>{b.displayName}</td>
+                <td>{b.wardId}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  // State 3: Empty Filter State
+  if (emptyFilterMessage) {
+    return (
+      <div
+        style={{
+          width: '100%',
+          height: '100%',
+          backgroundColor: '#12151D',
+          borderRadius: 'var(--radius-table)',
+          border: '1px solid var(--hairline)',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          textAlign: 'center',
           gap: 'var(--space-12)',
         }}
       >
@@ -556,6 +532,7 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
     );
   }
 
+  // State 4: Interactive Canvas Viewport
   return (
     <div
       ref={containerRef}
@@ -563,63 +540,28 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
         position: 'relative',
         width: '100%',
         height: '100%',
-        minHeight: '520px',
-        backgroundColor: 'var(--surface-1)',
-        border: '1px solid var(--hairline)',
-        borderRadius: 'var(--radius-flat)',
         overflow: 'hidden',
-        zIndex: 'var(--z-panel)',
-      }}
-      tabIndex={0}
-      role="region"
-      aria-label="Contagion Network Map"
-      onKeyDown={e => {
-        if (!selectedBorrowerId && borrowers.length > 0) {
-          onSelectBorrower(borrowers[0].id);
-          return;
-        }
-        const currentIdx = borrowers.findIndex(b => b.id === selectedBorrowerId);
-        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-          e.preventDefault();
-          const nextIdx = (currentIdx + 1) % borrowers.length;
-          onSelectBorrower(borrowers[nextIdx].id);
-        } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-          e.preventDefault();
-          const prevIdx = (currentIdx - 1 + borrowers.length) % borrowers.length;
-          onSelectBorrower(borrowers[prevIdx].id);
-        }
+        borderRadius: 'var(--radius-table)',
+        border: '1px solid var(--hairline)',
+        backgroundColor: '#12151D',
       }}
     >
-      {/* Loading Skeleton: static, faded node field, no shimmer (Part 4.3) */}
-      {isLoading && (
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            backgroundColor: 'var(--surface-1)',
-            opacity: 0.5,
-            zIndex: 15,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <span style={{ color: 'var(--ink-2)', fontSize: '12px' }}>Loading network topology...</span>
-        </div>
-      )}
-
       <canvas
         ref={canvasRef}
-        style={{ width: '100%', height: '100%', display: 'block', cursor: 'grab' }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
         onWheel={handleWheel}
         onClick={handleClick}
+        style={{
+          width: '100%',
+          height: '100%',
+          display: 'block',
+          cursor: isDraggingRef.current ? 'grabbing' : 'grab',
+        }}
       />
 
-      {/* Top-Left Legend Row & Reset View Control (Part 4.3 & Part 5) */}
+      {/* Top Left Legend & Reset View Control */}
       <div
         style={{
           position: 'absolute',
@@ -627,73 +569,77 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
           left: 'var(--space-12)',
           display: 'flex',
           alignItems: 'center',
-          gap: 'var(--space-12)',
-          backgroundColor: 'var(--surface-3)',
-          padding: '4px var(--space-8)',
+          gap: 'var(--space-8)',
+          backgroundColor: 'rgba(18, 21, 29, 0.90)',
+          padding: '4px 8px',
           borderRadius: 'var(--radius-control)',
           border: '1px solid var(--hairline)',
-          zIndex: 'var(--z-panel)',
+          fontSize: '11px',
+          zIndex: 'var(--z-panel)' as any,
+          userSelect: 'none',
         }}
       >
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--ink-1)' }}>
+          <span style={{ color: COLOR_IDIO, fontSize: '9px' }}>●</span> Idiosyncratic
+        </span>
+        <span style={{ color: 'var(--hairline)' }}>·</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--ink-1)' }}>
+          <span style={{ color: COLOR_INDUCED, fontSize: '9px' }}>▲</span> Induced
+        </span>
+        <span style={{ color: 'var(--hairline)' }}>·</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--ink-1)' }}>
+          <span style={{ color: COLOR_COVARIATE, fontSize: '9px' }}>■</span> Covariate
+        </span>
+
         <button
-          className="btn-secondary"
-          onClick={handleResetZoom}
-          style={{ height: '24px', padding: '0 var(--space-8)', fontSize: '11px' }}
-          title="Reset Zoom"
-          aria-label="Reset View"
+          className="btn-ghost"
+          onClick={fitToViewport}
+          style={{
+            marginLeft: 'var(--space-4)',
+            height: '20px',
+            padding: '0 6px',
+            fontSize: '10px',
+            fontFamily: 'var(--font-mono)',
+            border: '1px solid var(--hairline)',
+            borderRadius: 'var(--radius-control)',
+          }}
+          title="Reset canvas viewport to fit all nodes"
         >
           Reset View
         </button>
-
-        <span style={{ color: 'var(--hairline)' }}>|</span>
-
-        {/* Text-plus-swatch Legend with Shape Glyphs (Part 5) */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-12)', fontSize: '11px', color: 'var(--ink-1)' }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ color: COLOR_IDIO, fontSize: '12px' }}>●</span>
-            Idiosyncratic
-          </span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ color: COLOR_INDUCED, fontSize: '10px' }}>▲</span>
-            Induced
-          </span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ color: COLOR_COVARIATE, fontSize: '10px' }}>■</span>
-            Covariate
-          </span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ color: 'var(--ink-2)', fontSize: '12px' }}>●</span>
-            Unflagged
-          </span>
-        </div>
       </div>
 
-      {/* Lightweight Hover Tooltip (Part 4.3) */}
+      {/* Hover Tooltip (z-index 40) */}
       {hoveredNode && (
         <div
           style={{
             position: 'absolute',
             left: `${hoveredNode.screenX}px`,
             top: `${hoveredNode.screenY}px`,
-            width: '210px',
+            pointerEvents: 'none',
             backgroundColor: 'var(--surface-3)',
             border: '1px solid var(--hairline)',
             borderRadius: 'var(--radius-control)',
-            padding: 'var(--space-8)',
-            pointerEvents: 'none',
-            zIndex: 'var(--z-tooltip)',
+            padding: 'var(--space-8) var(--space-12)',
+            fontSize: '11px',
+            lineHeight: 1.4,
+            zIndex: 'var(--z-tooltip)' as any,
+            boxShadow: 'rgba(0,0,0,0.2) 0px 2px 10px 0px',
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-            <span style={{ fontWeight: 500, color: 'var(--ink-0)', fontSize: '12px' }}>
-              {hoveredNode.node.borrower.displayName}
-            </span>
-            <span className="tabular-num" style={{ fontSize: '11px', color: 'var(--ink-0)', fontWeight: 600 }}>
-              {(hoveredNode.snapshot.latentStress * 100).toFixed(1)}%
-            </span>
+          <div style={{ fontWeight: 600, color: 'var(--ink-0)' }}>
+            {hoveredNode.node.borrower.displayName} ({hoveredNode.node.id.toUpperCase()})
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--ink-1)', marginTop: '2px' }}>
-            {hoveredNode.node.borrower.jlgId.toUpperCase()} · {hoveredNode.node.borrower.occupation}
+          <div style={{ color: 'var(--ink-1)', fontSize: '10px' }}>
+            {hoveredNode.node.borrower.occupation} · Cycle {hoveredNode.node.borrower.loanCycle}
+          </div>
+          <div style={{ marginTop: '4px', display: 'flex', gap: 'var(--space-8)' }} className="tabular-num">
+            <span style={{ color: hoveredNode.snapshot.latentStress >= 0.35 ? 'var(--induced)' : 'var(--ink-0)' }}>
+              Stress: {(hoveredNode.snapshot.latentStress * 100).toFixed(1)}%
+            </span>
+            <span style={{ color: 'var(--ink-2)' }}>
+              DPD: {hoveredNode.snapshot.dpd}
+            </span>
           </div>
         </div>
       )}
