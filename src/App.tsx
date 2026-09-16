@@ -7,9 +7,9 @@ import {
   createPolicyRefinancingCutoffShock,
 } from './engine';
 import { CanvasGraph } from './graph/CanvasGraph';
-import { TimeScrubber } from './components/TimeScrubber';
-import { AttributionRail } from './components/AttributionRail';
-import { ShockInjectionPanel } from './components/ShockInjectionPanel';
+import { TimelineSequencer } from './components/TimelineSequencer';
+import { AttributionDossier } from './components/AttributionDossier';
+import { ScenarioDrawer } from './components/ScenarioDrawer';
 import { InterventionSimulator } from './components/InterventionSimulator';
 import { WardHeatMatrix } from './components/WardHeatMatrix';
 import { EvidenceExport } from './components/EvidenceExport';
@@ -30,7 +30,7 @@ export const App: React.FC = () => {
   const [activeIntervention, setActiveIntervention] = useState<Intervention | null>(null);
   const [isInterventionModalOpen, setIsInterventionModalOpen] = useState(false);
   const [selectedWardId, setSelectedWardId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'matrix' | 'table'>('matrix');
+  const [bottomView, setBottomView] = useState<'matrix' | 'table' | 'closed'>('matrix');
 
   const portfolio = useMemo(() => {
     return generateSyntheticPortfolio(urlState.seed);
@@ -51,6 +51,16 @@ export const App: React.FC = () => {
       }
     );
   }, [portfolio, activeShock, activeIntervention]);
+
+  // Compute 78-week average portfolio stress for Timeline Sequencer Histogram
+  const weeklyStressScores = useMemo(() => {
+    return Array.from({ length: 78 }).map((_, wIdx) => {
+      const snaps = simulation.snapshotsByWeek[wIdx] || [];
+      if (snaps.length === 0) return 0.12;
+      const total = snaps.reduce((acc, s) => acc + s.latentStress, 0);
+      return total / snaps.length;
+    });
+  }, [simulation]);
 
   const currentWeekSnapshots = useMemo(() => {
     const weekIndex = Math.min(78, Math.max(1, urlState.week));
@@ -96,6 +106,7 @@ export const App: React.FC = () => {
     return portfolio.wards.find(w => w.id === selectedBorrower.wardId) || null;
   }, [portfolio.wards, selectedBorrower]);
 
+  // Keyboard shortcut listener: Space to toggle play/pause
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
@@ -134,30 +145,45 @@ export const App: React.FC = () => {
       style={{
         display: 'flex',
         flexDirection: 'column',
-        minHeight: '100vh',
-        backgroundColor: 'var(--surface-0)',
+        height: '100vh',
+        width: '100vw',
+        backgroundColor: 'var(--bg-app)',
+        overflow: 'hidden',
       }}
     >
-      {/* Sleek Topbar Navigation */}
-      <header className="app-topbar">
+      {/* Top Cockpit Navigation Bar */}
+      <header
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '10px 20px',
+          backgroundColor: 'rgba(14, 16, 23, 0.95)',
+          borderBottom: '1px solid var(--border-subtle)',
+          backdropFilter: 'blur(20px)',
+          zIndex: 40,
+          flexShrink: 0,
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '15px', fontWeight: 700, letterSpacing: '-0.03em', color: '#fff' }}>
-              Tremor
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--color-signal)', display: 'inline-block', boxShadow: '0 0 8px rgba(16, 185, 129, 0.6)' }} />
+            <span style={{ fontSize: '15px', fontWeight: 700, letterSpacing: '-0.02em', color: '#fff' }}>
+              TREMOR
             </span>
-            <span style={{ color: 'var(--hairline)' }}>/</span>
-            <span style={{ fontSize: '12px', color: 'var(--ink-1)' }}>
-              Group Contagion Risk
+            <span style={{ color: 'var(--text-muted)' }}>/</span>
+            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+              Group-Contagion Diagnostic
             </span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', color: 'var(--ink-2)' }}>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', color: 'var(--text-muted)' }}>
             <span>Mumbai Central & Suburban</span>
             <span>•</span>
-            <span className="mono-num">4 Wards · 24 Centres · {portfolio.borrowers.length} Borrowers</span>
+            <span className="font-mono-num">{portfolio.wards.length} Wards · {portfolio.centres.length} Centres · {portfolio.borrowers.length} Borrowers</span>
           </div>
         </div>
 
-        {/* Audit, RNG Seed, and Evidence Export */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div
             style={{
@@ -165,15 +191,15 @@ export const App: React.FC = () => {
               alignItems: 'center',
               gap: '6px',
               fontSize: '11px',
-              color: 'var(--ink-2)',
+              color: 'var(--text-muted)',
               backgroundColor: 'rgba(255, 255, 255, 0.03)',
               padding: '2px 8px',
-              borderRadius: 'var(--radius-pill)',
-              border: '1px solid var(--hairline)',
+              borderRadius: '4px',
+              border: '1px solid var(--border-subtle)',
             }}
           >
-            <span>SEED</span>
-            <span className="mono-num" style={{ color: 'var(--ink-0)', fontWeight: 600 }}>
+            <span>RNG SEED</span>
+            <span className="font-mono-num" style={{ color: '#fff', fontWeight: 600 }}>
               {urlState.seed}
             </span>
             <button
@@ -181,12 +207,12 @@ export const App: React.FC = () => {
               style={{
                 background: 'none',
                 border: 'none',
-                color: 'var(--ink-1)',
+                color: 'var(--text-secondary)',
                 cursor: 'pointer',
-                fontSize: '10px',
+                fontSize: '11px',
                 padding: '0 2px',
               }}
-              title="Toggle deterministic portfolio seed"
+              title="Cycle deterministic seed"
             >
               ⇄
             </button>
@@ -204,121 +230,135 @@ export const App: React.FC = () => {
         </div>
       </header>
 
-      {/* Main Workspace Container */}
+      {/* 78-Week Stress Volume Histogram Sequencer */}
+      <TimelineSequencer
+        currentWeek={urlState.week}
+        totalWeeks={78}
+        isPlaying={isPlaying}
+        onWeekChange={w => setWeek(w)}
+        onTogglePlay={() => setIsPlaying(prev => !prev)}
+        onStepForward={() => setWeek(Math.min(78, urlState.week + 1))}
+        onStepBackward={() => setWeek(Math.max(1, urlState.week - 1))}
+        weeklyStressScores={weeklyStressScores}
+      />
+
+      {/* Primary Split View: 62% Network Canvas / 38% Attribution Dossier */}
       <div
         style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 'var(--space-16)',
-          padding: 'var(--space-16) var(--space-24)',
-          maxWidth: '1440px',
-          width: '100%',
-          margin: '0 auto',
+          flex: 1,
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 62%) minmax(0, 38%)',
+          gap: '12px',
+          padding: '12px 16px',
+          overflow: 'hidden',
+          minHeight: 0,
         }}
       >
-        {/* Timeline Scrubber (Full Width) */}
-        <TimeScrubber
-          currentWeek={urlState.week}
-          totalWeeks={78}
-          isPlaying={isPlaying}
-          onWeekChange={w => setWeek(w)}
-          onTogglePlay={() => setIsPlaying(prev => !prev)}
-          onStepForward={() => setWeek(Math.min(78, urlState.week + 1))}
-          onStepBackward={() => setWeek(Math.max(1, urlState.week - 1))}
-        />
-
-        {/* Primary Workspace Grid: 62% Contagion Canvas / 38% Attribution Rail */}
-        <main
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'minmax(0, 62%) minmax(0, 38%)',
-            gap: 'var(--space-16)',
-            alignItems: 'start',
-          }}
-          className="tremor-asymmetric-grid"
-        >
-          {/* Left: 60fps Network Canvas & Scenario Injection */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-16)' }}>
-            <div style={{ height: '560px', width: '100%' }}>
-              <CanvasGraph
-                wards={portfolio.wards}
-                centres={portfolio.centres}
-                jlgs={portfolio.jlgs}
-                borrowers={portfolio.borrowers}
-                edges={portfolio.edges}
-                currentWeekSnapshots={currentWeekSnapshots}
-                selectedBorrowerId={urlState.borrowerId}
-                onSelectBorrower={id => setBorrowerId(id)}
-                cascadeOriginBorrowerId={activeShock?.type === 'borrower' ? activeShock.targetId : 'b-001'}
-              />
-            </div>
-
-            <ShockInjectionPanel
+        {/* Left Column: Network Canvas + Scenario Injections */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', height: '100%', minHeight: 0 }}>
+          <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+            <CanvasGraph
               wards={portfolio.wards}
-              officers={portfolio.officers}
-              activeShock={activeShock}
-              currentWeek={urlState.week}
-              onApplyShock={handleApplyShock}
-              onClearShock={handleClearShock}
-              onApplyPolicyPreset={handleApplyPolicyPreset}
+              centres={portfolio.centres}
+              jlgs={portfolio.jlgs}
+              borrowers={portfolio.borrowers}
+              edges={portfolio.edges}
+              currentWeekSnapshots={currentWeekSnapshots}
+              selectedBorrowerId={urlState.borrowerId}
+              onSelectBorrower={id => setBorrowerId(id)}
+              cascadeOriginBorrowerId={activeShock?.type === 'borrower' ? activeShock.targetId : 'b-001'}
             />
           </div>
 
-          {/* Right: Three-Way Causal Attribution Rail */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-16)' }}>
-            <AttributionRail
-              borrower={selectedBorrower}
-              centre={selectedCentre}
-              ward={selectedWard}
-              jlg={selectedJlg}
-              snapshot={selectedSnapshot}
-              transientMetric={currentTransientMetric}
-              onSelectBorrowerId={id => setBorrowerId(id)}
-              onOpenInterventionModal={() => setIsInterventionModalOpen(true)}
-            />
-          </div>
-        </main>
+          <ScenarioDrawer
+            wards={portfolio.wards}
+            officers={portfolio.officers}
+            activeShock={activeShock}
+            currentWeek={urlState.week}
+            onApplyShock={handleApplyShock}
+            onClearShock={handleClearShock}
+            onApplyPolicyPreset={handleApplyPolicyPreset}
+          />
+        </div>
 
-        {/* Lower Multi-View Surface: Ward Exposure Matrix & Accessible Ledger */}
-        <section style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--hairline)', paddingBottom: '8px' }}>
+        {/* Right Column: Three-Way Causal Attribution Dossier */}
+        <div style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          <AttributionDossier
+            borrower={selectedBorrower}
+            centre={selectedCentre}
+            ward={selectedWard}
+            jlg={selectedJlg}
+            snapshot={selectedSnapshot}
+            transientMetric={currentTransientMetric}
+            onSelectBorrowerId={id => setBorrowerId(id)}
+            onOpenInterventionModal={() => setIsInterventionModalOpen(true)}
+          />
+        </div>
+      </div>
+
+      {/* Bottom Collapsible Ledger & Exposure Tray Bar */}
+      <footer
+        style={{
+          flexShrink: 0,
+          borderTop: '1px solid var(--border-subtle)',
+          backgroundColor: 'var(--bg-surface)',
+          zIndex: 30,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 16px' }}>
+          <div style={{ display: 'flex', gap: '6px' }}>
             <button
-              className={`btn-control ${activeTab === 'matrix' ? 'active' : ''}`}
-              onClick={() => setActiveTab('matrix')}
-              style={{ border: 'none', background: activeTab === 'matrix' ? 'rgba(255,255,255,0.08)' : 'none' }}
+              className={`btn-action ${bottomView === 'matrix' ? 'active' : ''}`}
+              onClick={() => setBottomView(bottomView === 'matrix' ? 'closed' : 'matrix')}
+              style={{ fontSize: '11px', height: '24px' }}
             >
               Ward Exposure Matrix (F12)
             </button>
             <button
-              className={`btn-control ${activeTab === 'table' ? 'active' : ''}`}
-              onClick={() => setActiveTab('table')}
-              style={{ border: 'none', background: activeTab === 'table' ? 'rgba(255,255,255,0.08)' : 'none' }}
+              className={`btn-action ${bottomView === 'table' ? 'active' : ''}`}
+              onClick={() => setBottomView(bottomView === 'table' ? 'closed' : 'table')}
+              style={{ fontSize: '11px', height: '24px' }}
             >
               Borrower Ledger Table
             </button>
           </div>
 
-          {activeTab === 'matrix' ? (
-            <WardHeatMatrix
-              wardAggregates={currentWardAggregates}
-              selectedWardId={selectedWardId}
-              onSelectWard={wId => setSelectedWardId(wId)}
-            />
-          ) : (
-            <AccessibleBorrowerTable
-              borrowers={portfolio.borrowers}
-              centres={portfolio.centres}
-              wards={portfolio.wards}
-              jlgs={portfolio.jlgs}
-              snapshots={currentWeekSnapshots}
-              selectedBorrowerId={urlState.borrowerId}
-              onSelectBorrower={id => setBorrowerId(id)}
-            />
+          {bottomView !== 'closed' && (
+            <button
+              onClick={() => setBottomView('closed')}
+              className="btn-action"
+              style={{ fontSize: '10px', height: '22px', border: 'none', background: 'none', color: 'var(--text-muted)' }}
+            >
+              Collapse ✕
+            </button>
           )}
-        </section>
-      </div>
+        </div>
 
-      {/* Intervention Simulator Modal */}
+        {/* Expanded Drawer Surface */}
+        {bottomView !== 'closed' && (
+          <div style={{ maxHeight: '240px', overflowY: 'auto', borderTop: '1px solid var(--border-subtle)' }}>
+            {bottomView === 'matrix' ? (
+              <WardHeatMatrix
+                wardAggregates={currentWardAggregates}
+                selectedWardId={selectedWardId}
+                onSelectWard={wId => setSelectedWardId(wId)}
+              />
+            ) : (
+              <AccessibleBorrowerTable
+                borrowers={portfolio.borrowers}
+                centres={portfolio.centres}
+                wards={portfolio.wards}
+                jlgs={portfolio.jlgs}
+                snapshots={currentWeekSnapshots}
+                selectedBorrowerId={urlState.borrowerId}
+                onSelectBorrower={id => setBorrowerId(id)}
+              />
+            )}
+          </div>
+        )}
+      </footer>
+
+      {/* Intervention Trajectory Simulator Modal */}
       {isInterventionModalOpen && selectedBorrower && (
         <InterventionSimulator
           wards={portfolio.wards}
@@ -337,14 +377,6 @@ export const App: React.FC = () => {
           onClose={() => setIsInterventionModalOpen(false)}
         />
       )}
-
-      <style>{`
-        @media (max-width: 1024px) {
-          .tremor-asymmetric-grid {
-            grid-template-columns: 1fr !important;
-          }
-        }
-      `}</style>
     </div>
   );
 };

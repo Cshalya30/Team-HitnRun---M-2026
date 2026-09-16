@@ -37,12 +37,11 @@ interface ClusterHull {
 }
 
 const COLOR_IDIO = '#E5B85C';
-const COLOR_INDUCED = '#E25563';
-const COLOR_COVARIATE = '#489FD1';
-const COLOR_SIGNAL = '#3DD68C';
-const COLOR_BASE = '#1C202C';
+const COLOR_INDUCED = '#F43F5E';
+const COLOR_COVARIATE = '#38BDF8';
+const COLOR_SIGNAL = '#10B981';
+const COLOR_BASE = '#191C26';
 const COLOR_SELECTION = '#FFFFFF';
-const COLOR_MUTED = '#586073';
 
 export const CanvasGraph: React.FC<CanvasGraphProps> = ({
   wards,
@@ -73,7 +72,10 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
     snapshot: StressSnapshot;
   } | null>(null);
 
-  // Layout Computation
+  // Animation ticker for active contagion pulse wave
+  const animTimeRef = useRef(0);
+
+  // Hierarchical Cluster Layout
   useEffect(() => {
     const nodeMap = new Map<string, NodeLayout>();
     const hulls: ClusterHull[] = [];
@@ -181,7 +183,22 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
     }
   }, [wards, centres, jlgs, borrowers, edges]);
 
-  // Canvas Render Loop
+  // Center on Selected Borrower
+  useEffect(() => {
+    if (selectedBorrowerId && containerRef.current) {
+      const node = nodesRef.current.get(selectedBorrowerId);
+      if (node) {
+        const rect = containerRef.current.getBoundingClientRect();
+        setTransform(prev => ({
+          ...prev,
+          x: rect.width / 2 - node.x * prev.scale,
+          y: rect.height / 2 - node.y * prev.scale,
+        }));
+      }
+    }
+  }, [selectedBorrowerId]);
+
+  // Render Canvas (60fps)
   const renderCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -201,68 +218,91 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, width, height);
 
-    // Subtle ambient background tone
-    ctx.fillStyle = '#08090D';
+    // Deep obsidian background
+    ctx.fillStyle = '#090A0E';
     ctx.fillRect(0, 0, width, height);
 
     ctx.translate(transform.x, transform.y);
     ctx.scale(transform.scale, transform.scale);
 
-    // 1. Draw Wards and Centres (Clean hairline boundaries, no thick ugly panels)
+    // 1. Subtle High-Tech Dot Matrix Grid
+    const dotSpacing = 36;
+    const gridStartX = Math.floor((-transform.x / transform.scale) / dotSpacing) * dotSpacing - 36;
+    const gridEndX = gridStartX + (width / transform.scale) + 72;
+    const gridStartY = Math.floor((-transform.y / transform.scale) / dotSpacing) * dotSpacing - 36;
+    const gridEndY = gridStartY + (height / transform.scale) + 72;
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.035)';
+    for (let gx = gridStartX; gx <= gridEndX; gx += dotSpacing) {
+      for (let gy = gridStartY; gy <= gridEndY; gy += dotSpacing) {
+        ctx.fillRect(gx, gy, 1.2, 1.2);
+      }
+    }
+
+    // 2. Cluster Hulls
     hullsRef.current.forEach(hull => {
       if (hull.type === 'ward') {
         ctx.beginPath();
         ctx.arc(hull.cx, hull.cy, hull.radius, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(15, 17, 23, 0.5)';
+        ctx.fillStyle = 'rgba(15, 17, 24, 0.55)';
         ctx.fill();
-        ctx.strokeStyle = 'rgba(34, 38, 52, 0.6)';
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
         ctx.lineWidth = 1;
         ctx.stroke();
 
-        // Minimalist Ward Title
         ctx.font = '600 11px "JetBrains Mono", monospace';
-        ctx.fillStyle = '#41485B';
+        ctx.fillStyle = '#4B5366';
         ctx.textAlign = 'center';
         ctx.fillText(hull.name.toUpperCase(), hull.cx, hull.cy - hull.radius + 22);
       } else if (hull.type === 'centre') {
         ctx.beginPath();
         ctx.arc(hull.cx, hull.cy, hull.radius, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(34, 38, 52, 0.4)';
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.035)';
         ctx.lineWidth = 0.75;
-        ctx.stroke();
-      } else if (hull.type === 'jlg') {
-        ctx.beginPath();
-        ctx.arc(hull.cx, hull.cy, hull.radius, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
-        ctx.lineWidth = 0.5;
         ctx.stroke();
       }
     });
 
-    // 2. Draw Edges
+    // 3. Edges with Dynamic Contagion Flow
+    animTimeRef.current += 0.04;
+    const timeOffset = (animTimeRef.current * 20) % 30;
+
     const edges = edgeListRef.current;
     for (let i = 0; i < edges.length; i++) {
       const { src, dst, kind } = edges[i];
       const isConnectedToSelected = selectedBorrowerId && (src.id === selectedBorrowerId || dst.id === selectedBorrowerId);
+      const srcSnap = currentWeekSnapshots.get(src.id);
+      const dstSnap = currentWeekSnapshots.get(dst.id);
+      const hasContagion = (srcSnap?.latentStress ?? 0) > 0.35 && (dstSnap?.shareInduced ?? 0) > 0.3;
 
       ctx.beginPath();
       ctx.moveTo(src.x, src.y);
       ctx.lineTo(dst.x, dst.y);
 
       if (isConnectedToSelected) {
-        ctx.strokeStyle = kind === 'guarantee' ? 'rgba(255, 255, 255, 0.8)' : 'rgba(112, 100, 233, 0.5)';
+        ctx.strokeStyle = kind === 'guarantee' ? '#FFFFFF' : 'rgba(99, 102, 241, 0.7)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      } else if (hasContagion && kind === 'guarantee') {
+        // Active contagion flow edge!
+        ctx.strokeStyle = 'rgba(244, 63, 94, 0.5)';
         ctx.lineWidth = 1.2;
+        ctx.setLineDash([4, 6]);
+        ctx.lineDashOffset = -timeOffset;
+        ctx.stroke();
+        ctx.setLineDash([]);
       } else if (kind === 'guarantee') {
-        ctx.strokeStyle = 'rgba(34, 38, 52, 0.45)';
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
         ctx.lineWidth = 0.75;
+        ctx.stroke();
       } else {
-        ctx.strokeStyle = 'rgba(34, 38, 52, 0.15)';
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.02)';
         ctx.lineWidth = 0.5;
+        ctx.stroke();
       }
-      ctx.stroke();
     }
 
-    // 3. Draw Nodes with Senior-Designer Precision
+    // 4. Nodes with Geometric Styling & Halos
     nodesRef.current.forEach(node => {
       const snapshot = currentWeekSnapshots.get(node.id);
       const isSelected = node.id === selectedBorrowerId;
@@ -271,17 +311,17 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
       const dominantType = snapshot?.dominantStressType ?? 'unflagged';
 
       let nodeColor = COLOR_BASE;
-      let strokeColor = '#2B3142';
+      let strokeColor = 'rgba(255, 255, 255, 0.12)';
 
       if (dominantType === 'idio') {
         nodeColor = COLOR_IDIO;
-        strokeColor = 'rgba(229, 184, 92, 0.4)';
+        strokeColor = 'rgba(229, 184, 92, 0.5)';
       } else if (dominantType === 'induced') {
         nodeColor = COLOR_INDUCED;
-        strokeColor = 'rgba(226, 85, 99, 0.4)';
+        strokeColor = 'rgba(244, 63, 94, 0.5)';
       } else if (dominantType === 'covariate') {
         nodeColor = COLOR_COVARIATE;
-        strokeColor = 'rgba(72, 159, 209, 0.4)';
+        strokeColor = 'rgba(56, 189, 248, 0.5)';
       }
 
       const r = isSelected ? 8 : dominantType !== 'unflagged' ? 6 : 4;
@@ -289,27 +329,27 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
       ctx.save();
       ctx.translate(node.x, node.y);
 
-      // Subtle ambient glow for stressed nodes
+      // Radial Halo on Stressed Nodes
       if (dominantType !== 'unflagged') {
         ctx.beginPath();
-        ctx.arc(0, 0, r + 4, 0, Math.PI * 2);
-        ctx.fillStyle = dominantType === 'induced' ? 'rgba(226, 85, 99, 0.15)' : 'rgba(229, 184, 92, 0.15)';
+        ctx.arc(0, 0, r + 5, 0, Math.PI * 2);
+        ctx.fillStyle = dominantType === 'induced' ? 'rgba(244, 63, 94, 0.2)' : 'rgba(229, 184, 92, 0.2)';
         ctx.fill();
       }
 
       ctx.beginPath();
       if (dominantType === 'induced') {
-        // Crisp Diamond
-        ctx.moveTo(0, -r * 1.25);
-        ctx.lineTo(r * 1.25, 0);
-        ctx.lineTo(0, r * 1.25);
-        ctx.lineTo(-r * 1.25, 0);
+        // Diamond
+        ctx.moveTo(0, -r * 1.3);
+        ctx.lineTo(r * 1.3, 0);
+        ctx.lineTo(0, r * 1.3);
+        ctx.lineTo(-r * 1.3, 0);
         ctx.closePath();
       } else if (dominantType === 'covariate') {
-        // Crisp Square
+        // Square
         ctx.rect(-r * 0.9, -r * 0.9, r * 1.8, r * 1.8);
       } else {
-        // Crisp Circle
+        // Circle
         ctx.arc(0, 0, r, 0, Math.PI * 2);
       }
 
@@ -320,20 +360,22 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
       ctx.lineWidth = isSelected ? 2 : 1;
       ctx.stroke();
 
-      // Selection halo
+      // Selection Marker
       if (isSelected) {
         ctx.beginPath();
-        ctx.arc(0, 0, r + 5, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-        ctx.lineWidth = 1;
+        ctx.arc(0, 0, r + 6, 0, Math.PI * 2);
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 1.2;
+        ctx.setLineDash([2, 2]);
         ctx.stroke();
+        ctx.setLineDash([]);
       }
 
-      // Cascade Origin Halo
+      // Shock Origin Pulse
       if (isOrigin) {
         ctx.beginPath();
-        ctx.arc(0, 0, r + 7, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(226, 85, 99, 0.6)';
+        ctx.arc(0, 0, r + 9, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(244, 63, 94, 0.7)';
         ctx.lineWidth = 1.5;
         ctx.stroke();
       }
@@ -392,7 +434,7 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
       if (snap) {
         let screenX = e.clientX - rect.left + 16;
         let screenY = e.clientY - rect.top + 16;
-        if (screenX + 240 > rect.width) screenX = e.clientX - rect.left - 250;
+        if (screenX + 250 > rect.width) screenX = e.clientX - rect.left - 260;
         if (screenY + 140 > rect.height) screenY = e.clientY - rect.top - 150;
 
         setHoveredNode({
@@ -414,7 +456,7 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
   const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
     e.preventDefault();
     const zoomFactor = e.deltaY < 0 ? 1.08 : 0.92;
-    const newScale = Math.min(2.8, Math.max(0.4, transform.scale * zoomFactor));
+    const newScale = Math.min(3.2, Math.max(0.35, transform.scale * zoomFactor));
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -473,15 +515,15 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
         position: 'relative',
         width: '100%',
         height: '100%',
-        minHeight: '520px',
-        backgroundColor: '#08090D',
-        borderRadius: 'var(--radius-panel)',
-        border: '1px solid var(--hairline)',
+        minHeight: '560px',
+        backgroundColor: '#090A0E',
+        borderRadius: '12px',
+        border: '1px solid var(--border-subtle)',
         overflow: 'hidden',
       }}
       tabIndex={0}
       role="region"
-      aria-label="Borrower Contagion Graph"
+      aria-label="Contagion Network Map"
     >
       <canvas
         ref={canvasRef}
@@ -494,7 +536,7 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
         onClick={handleClick}
       />
 
-      {/* Floating Minimalist HUD */}
+      {/* Floating Modern HUD */}
       <div
         style={{
           position: 'absolute',
@@ -503,24 +545,24 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
           display: 'flex',
           alignItems: 'center',
           gap: '12px',
-          backgroundColor: 'rgba(15, 17, 23, 0.8)',
+          backgroundColor: 'rgba(14, 16, 23, 0.85)',
           padding: '6px 12px',
-          borderRadius: 'var(--radius-pill)',
-          border: '1px solid var(--hairline)',
-          backdropFilter: 'blur(10px)',
+          borderRadius: '999px',
+          border: '1px solid var(--border-subtle)',
+          backdropFilter: 'blur(16px)',
           zIndex: 10,
         }}
       >
         <button
           onClick={handleResetZoom}
-          className="btn-control"
-          style={{ height: '24px', padding: '0 8px', fontSize: '11px', borderRadius: '999px', border: 'none', background: 'rgba(255,255,255,0.06)' }}
+          className="btn-action"
+          style={{ height: '22px', fontSize: '11px', padding: '0 8px', borderRadius: '999px', border: 'none', background: 'rgba(255,255,255,0.06)' }}
           title="Reset Zoom"
         >
           Reset View
         </button>
-        <span style={{ color: 'var(--hairline)' }}>•</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '11px', color: 'var(--ink-1)' }}>
+        <span style={{ color: 'var(--border-subtle)' }}>•</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '11px', color: 'var(--text-secondary)' }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
             <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: COLOR_IDIO }} />
             Idiosyncratic
@@ -533,14 +575,10 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
             <span style={{ width: '7px', height: '7px', backgroundColor: COLOR_COVARIATE }} />
             Covariate
           </span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-            <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#2B3142' }} />
-            Calm
-          </span>
         </div>
       </div>
 
-      {/* Refined Frosted Tooltip */}
+      {/* Collision-Aware Frosted Tooltip */}
       {hoveredNode && (
         <div
           style={{
@@ -548,22 +586,22 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
             left: `${hoveredNode.screenX}px`,
             top: `${hoveredNode.screenY}px`,
             width: '240px',
-            backgroundColor: 'rgba(15, 17, 23, 0.95)',
-            border: '1px solid var(--hairline)',
+            backgroundColor: 'rgba(14, 16, 23, 0.95)',
+            border: '1px solid var(--border-medium)',
             borderRadius: '8px',
             padding: '12px',
             pointerEvents: 'none',
             zIndex: 20,
-            backdropFilter: 'blur(12px)',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.6)',
+            backdropFilter: 'blur(16px)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8)',
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-            <span style={{ fontWeight: 600, color: 'var(--ink-0)', fontSize: '13px' }}>
+            <span style={{ fontWeight: 600, color: '#fff', fontSize: '13px' }}>
               {hoveredNode.node.borrower.displayName}
             </span>
             <span
-              className="mono-num"
+              className="font-mono-num"
               style={{
                 fontSize: '12px',
                 fontWeight: 700,
@@ -574,16 +612,16 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
                     ? COLOR_IDIO
                     : hoveredNode.snapshot.dominantStressType === 'covariate'
                     ? COLOR_COVARIATE
-                    : 'var(--ink-1)',
+                    : '#fff',
               }}
             >
               {(hoveredNode.snapshot.latentStress * 100).toFixed(0)}%
             </span>
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--ink-1)', marginTop: '2px' }}>
+          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
             {hoveredNode.node.borrower.occupation}
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--ink-2)', marginTop: '4px' }}>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
             {hoveredNode.node.borrower.jlgId.toUpperCase()} · DPD: {hoveredNode.snapshot.dpd}d
           </div>
           {hoveredNode.snapshot.sourceBorrowerName && (
@@ -593,7 +631,7 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
                 color: COLOR_INDUCED,
                 marginTop: '8px',
                 paddingTop: '6px',
-                borderTop: '1px solid var(--hairline-subtle)',
+                borderTop: '1px solid var(--border-subtle)',
               }}
             >
               Induced from {hoveredNode.snapshot.sourceBorrowerName}
