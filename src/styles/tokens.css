@@ -1,0 +1,284 @@
+:root {
+  /* Surfaces - Senior Designer Deep Obsidian Scale */
+  --surface-0: #08090D;
+  --surface-1: #0F1117;
+  --surface-2: #161922;
+  --surface-hover: #1D212E;
+  --hairline: #222634;
+  --hairline-subtle: #171B26;
+
+  /* Inks - High Legibility Hierarchy */
+  --ink-0: #F3F4F8;
+  --ink-1: #9DA5B8;
+  --ink-2: #586073;
+
+  /* Stress Semantics - Precise, un-gimmicky financial accents */
+  --idio: #E5B85C;
+  --induced: #E25563;
+  --covariate: #489FD1;
+  --signal: #3DD68C;
+  --focus: #7064E9;
+
+  /* Fonts */
+  --font-display: 'Bricolage Grotesque', -apple-system, sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Spatial Scale */
+  --space-4: 4px;
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-20: 20px;
+  --space-24: 24px;
+  --space-32: 32px;
+  --space-48: 48px;
+
+  /* Radii */
+  --radius-control: 6px;
+  --radius-panel: 12px;
+  --radius-pill: 999px;
+
+  /* Motion */
+  --duration-hover: 120ms;
+  --ease-hover: cubic-bezier(0.2, 0, 0.4, 1);
+  --duration-panel: 180ms;
+  --ease-panel: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-hover: 0ms;
+    --duration-panel: 0ms;
+  }
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--surface-0);
+  color: var(--ink-0);
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Numerals ALWAYS monospace tabular to stop digit jitter */
+.mono-num,
+.tabular-num,
+span[data-num],
+td[data-num],
+div[data-num] {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Non-AI Panel Design: Calm background, subtle border, no nested card clutter */
+.surface-panel {
+  background-color: var(--surface-1);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-panel);
+  padding: var(--space-20);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Seamless Header Bar */
+.app-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-12) var(--space-20);
+  background-color: rgba(15, 17, 23, 0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--hairline);
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+/* Professional Buttons */
+.btn-control {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-0);
+  background-color: var(--surface-2);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-control);
+  padding: 0 var(--space-12);
+  cursor: pointer;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all var(--duration-hover) var(--ease-hover);
+  user-select: none;
+}
+
+.btn-control:hover:not(:disabled) {
+  background-color: var(--surface-hover);
+  border-color: #2F3547;
+  color: #fff;
+}
+
+.btn-control:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.btn-control.active {
+  background-color: #232838;
+  border-color: #3D4660;
+  color: #fff;
+}
+
+/* Minimalist Badges */
+.badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background-color: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--hairline);
+  color: var(--ink-1);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.badge-idio {
+  color: var(--idio);
+  border-color: rgba(229, 184, 92, 0.25);
+  background-color: rgba(229, 184, 92, 0.08);
+}
+
+.badge-induced {
+  color: var(--induced);
+  border-color: rgba(226, 85, 99, 0.25);
+  background-color: rgba(226, 85, 99, 0.08);
+}
+
+.badge-covariate {
+  color: var(--covariate);
+  border-color: rgba(72, 159, 209, 0.25);
+  background-color: rgba(72, 159, 209, 0.08);
+}
+
+.badge-signal {
+  color: var(--signal);
+  border-color: rgba(61, 214, 140, 0.25);
+  background-color: rgba(61, 214, 140, 0.08);
+}
+
+/* Headings with deliberate tight tracking */
+h1, h2, h3, .heading-display {
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--ink-0);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+h1 { font-size: 22px; }
+h2 { font-size: 18px; }
+h3 { font-size: 14px; }
+
+/* Senior Designer Dense Financial Table */
+table.dense-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+table.dense-table th {
+  height: 34px;
+  padding: 0 var(--space-12);
+  text-align: left;
+  font-weight: 500;
+  color: var(--ink-2);
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--hairline);
+  background-color: transparent;
+}
+
+table.dense-table td {
+  height: 36px;
+  padding: 0 var(--space-12);
+  border-bottom: 1px solid var(--hairline-subtle);
+  color: var(--ink-0);
+  transition: background-color var(--duration-hover) var(--ease-hover);
+}
+
+table.dense-table tr:hover td {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+/* Clean Custom Slider */
+input[type="range"].tremor-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--hairline);
+  outline: none;
+  cursor: pointer;
+  transition: background var(--duration-hover);
+}
+
+input[type="range"].tremor-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--surface-0);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+  transition: transform var(--duration-hover);
+}
+
+input[type="range"].tremor-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+/* Loading Skeletons */
+.skeleton-box {
+  background: linear-gradient(90deg, var(--surface-1) 25%, var(--surface-2) 50%, var(--surface-1) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s infinite ease-in-out;
+  border-radius: var(--radius-control);
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-box {
+    animation: none;
+    background: var(--surface-2);
+  }
+}
