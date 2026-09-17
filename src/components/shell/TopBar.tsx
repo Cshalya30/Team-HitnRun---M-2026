@@ -36,169 +36,201 @@ export const TopBar: React.FC<TopBarProps> = ({
 }) => {
   return (
     <>
-    <header
-      className="boot-topbar"
-      style={{
-        height: '56px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0 var(--space-24)',
-        backgroundColor: 'var(--surface-0)',
-        borderBottom: '1px solid var(--hairline)',
-        zIndex: 'var(--z-sticky)' as any,
-        flexShrink: 0,
-      }}
-    >
-      {/* Left: Wordmark · Breadcrumb · Plain-text Portfolio Meta */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-16)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-8)' }}>
-          <span
+      <header
+        className="boot-topbar"
+        style={{
+          height: '56px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 var(--space-24)',
+          backgroundColor: 'var(--surface-0)',
+          borderBottom: '2.5px solid var(--hairline)',
+          zIndex: 'var(--z-sticky)' as any,
+          flexShrink: 0,
+        }}
+      >
+        {/* Left: Wordmark · Breadcrumb · Plain-text Portfolio Meta */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-16)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-8)' }}>
+            <span
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '18px',
+                fontWeight: 900,
+                letterSpacing: '-0.03em',
+                color: 'var(--ink-0)',
+                textTransform: 'uppercase',
+              }}
+            >
+              TREMOR
+            </span>
+            <span style={{ color: 'var(--idio)', fontWeight: 900 }}>///</span>
+            <span
+              style={{
+                fontSize: '11px',
+                fontFamily: 'var(--font-mono)',
+                fontWeight: 800,
+                color: 'var(--ink-0)',
+                backgroundColor: 'var(--surface-1)',
+                padding: '2px 8px',
+                border: '1.5px solid var(--hairline)',
+                borderRadius: '3px',
+                textTransform: 'uppercase',
+              }}
+            >
+              {activeRoute}
+            </span>
+          </div>
+
+          <div
             style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: '16px',
-              fontWeight: 700,
-              letterSpacing: '-0.02em',
-              color: 'var(--ink-0)',
+              fontSize: '11px',
+              fontFamily: 'var(--font-mono)',
+              color: 'var(--ink-1)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-8)',
             }}
           >
-            TREMOR
-          </span>
-          <span style={{ color: 'var(--hairline)' }}>/</span>
-          <span style={{ fontSize: '12px', color: 'var(--ink-1)' }}>
-            {activeRoute.charAt(0).toUpperCase() + activeRoute.slice(1)}
-          </span>
+            <span style={{ color: 'var(--ink-0)', fontWeight: 700 }}>MUMBAI & THANE</span>
+            <span>·</span>
+            <span className="tabular-num">
+              {portfolioStats.wards} WARDS · {portfolioStats.centres} CENTRES · {portfolioStats.borrowers} NODES
+            </span>
+          </div>
         </div>
 
-        <div
-          style={{
-            fontSize: '11px',
-            color: 'var(--ink-1)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 'var(--space-8)',
-          }}
-        >
-          <span style={{ color: 'var(--ink-0)', fontWeight: 500 }}>Mumbai Central, Suburban & Thane</span>
-          <span>·</span>
-          <span>{portfolioStats.wards} wards · {portfolioStats.centres} centres · {portfolioStats.borrowers} borrowers</span>
-        </div>
-      </div>
+        {/* Right: Theme Toggle · Active Intervention · PROC SEED · Demo Shortcut · Evidence Export */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-12)' }}>
+          {activeIntervention && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                backgroundColor: '#000000',
+                border: '2px solid var(--signal)',
+                borderRadius: 'var(--radius-control)',
+                boxShadow: '2px 2px 0px var(--signal)',
+                padding: '3px 8px',
+                fontSize: '11px',
+                fontFamily: 'var(--font-mono)',
+                fontWeight: 800,
+                color: 'var(--signal)',
+              }}
+            >
+              <span>● ACTIVE: {activeIntervention.title.split('&')[0].trim().toUpperCase()}</span>
+              {onClearIntervention && (
+                <button
+                  onClick={onClearIntervention}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--signal)',
+                    cursor: 'pointer',
+                    fontSize: '11px',
+                    fontWeight: 900,
+                    padding: '0 2px',
+                  }}
+                  title="Clear active intervention"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          )}
 
-      {/* Right: Theme Toggle · Active Intervention · PROC SEED · Demo Shortcut · Evidence Export */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-16)' }}>
-        {activeIntervention && (
+          <ThemeToggle />
+
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
-              backgroundColor: 'rgba(20, 122, 82, 0.2)',
-              border: '1px solid var(--signal)',
-              borderRadius: 'var(--radius-control)',
-              padding: '3px 8px',
+              gap: 'var(--space-6)',
               fontSize: '11px',
               fontFamily: 'var(--font-mono)',
-              color: 'var(--signal)',
+              fontWeight: 700,
+              backgroundColor: 'var(--surface-1)',
+              border: '2px solid var(--hairline)',
+              boxShadow: '2px 2px 0px var(--hairline)',
+              padding: '2px 8px',
+              borderRadius: 'var(--radius-control)',
             }}
           >
-            <span>● Active: {activeIntervention.title.split('&')[0].trim()}</span>
-            {onClearIntervention && (
-              <button
-                onClick={onClearIntervention}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--signal)',
-                  cursor: 'pointer',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  padding: '0 2px',
-                }}
-                title="Clear active intervention"
-              >
-                ✕
-              </button>
-            )}
+            <span style={{ color: 'var(--ink-2)' }}>SEED</span>
+            <span className="tabular-num" style={{ color: 'var(--ink-0)', fontWeight: 800 }}>
+              {seed}
+            </span>
+            <button
+              onClick={onCycleSeed}
+              className="btn-ghost"
+              style={{ padding: '0 4px', height: '20px', fontSize: '12px', color: 'var(--idio)', fontWeight: 900 }}
+              title="Cycle deterministic seed"
+            >
+              ⇄
+            </button>
           </div>
-        )}
-        <ThemeToggle />
+
+          <button
+            className="btn-primary"
+            onClick={onDemoShortcut}
+            style={{
+              height: '30px',
+              padding: '0 12px',
+              fontSize: '11px',
+            }}
+            title="Jump directly to demo state: Week 22, Sunita K. (b-413), Lakshmi Shock"
+          >
+            DEMO: SUNITA W22
+          </button>
+
+          <EvidenceExport
+            seed={seed}
+            currentWeek={currentWeek}
+            borrower={selectedBorrower}
+            centre={selectedCentre}
+            ward={selectedWard}
+            jlg={selectedJlg}
+            snapshot={selectedSnapshot}
+          />
+        </div>
+      </header>
+
+      {/* Maximalist Scrolling Ticker Tape Marquee */}
+      <div
+        className="maximalist-ticker"
+        style={{
+          borderBottom: '2.5px solid var(--hairline)',
+          height: '24px',
+          display: 'flex',
+          alignItems: 'center',
+          overflow: 'hidden',
+        }}
+      >
         <div
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 'var(--space-6)',
-            fontSize: '11px',
-            fontFamily: 'var(--font-mono)',
-            color: 'var(--ink-1)',
+            display: 'inline-block',
+            whiteSpace: 'nowrap',
+            animation: 'marquee 30s linear infinite',
           }}
         >
-          <span>PROC SEED</span>
-          <span className="tabular-num" style={{ color: 'var(--ink-0)', fontWeight: 600 }}>
-            {seed}
+          <span>
+            ⚡ TREMOR CONTAGION RISK ENGINE ⚡ 5,245 BORROWERS · 30 WARDS · 177 CENTRES · 78 WEEKS TIMELINE ⚡ REAL-TIME LATENT PROPAGATION ⚡ 3-CHANNEL COUNTERFACTUAL ABLATION ⚡ TRANSIENT FALSE-POSITIVE SUPPRESSION ⚡ RBI & MFIN CALIBRATED ⚡
           </span>
-          <button
-            onClick={onCycleSeed}
-            className="btn-ghost"
-            style={{ padding: '0 4px', height: '22px', fontSize: '11px', color: 'var(--ink-0)' }}
-            title="Cycle deterministic seed"
-          >
-            ⇄
-          </button>
+          <span style={{ marginLeft: '48px' }}>
+            ⚡ TREMOR CONTAGION RISK ENGINE ⚡ 5,245 BORROWERS · 30 WARDS · 177 CENTRES · 78 WEEKS TIMELINE ⚡ REAL-TIME LATENT PROPAGATION ⚡ 3-CHANNEL COUNTERFACTUAL ABLATION ⚡ TRANSIENT FALSE-POSITIVE SUPPRESSION ⚡ RBI & MFIN CALIBRATED ⚡
+          </span>
         </div>
-
-        <button
-          className="btn-secondary"
-          onClick={onDemoShortcut}
-          style={{
-            height: '28px',
-            fontSize: '11px',
-            fontFamily: 'var(--font-mono)',
-            fontWeight: 600,
-            borderColor: 'var(--hairline)',
-            backgroundColor: 'var(--surface-2)',
-            color: 'var(--ink-0)',
-            padding: '0 var(--space-12)',
-            cursor: 'pointer',
-          }}
-          title="Jump directly to demo state: Week 22, Sunita K. (b-413), Lakshmi Shock"
-        >
-          Demo: Sunita W22
-        </button>
-
-        <EvidenceExport
-          seed={seed}
-          currentWeek={currentWeek}
-          borrower={selectedBorrower}
-          centre={selectedCentre}
-          ward={selectedWard}
-          jlg={selectedJlg}
-          snapshot={selectedSnapshot}
-        />
+        <style>
+          {`
+            @keyframes marquee {
+              0% { transform: translateX(0%); }
+              100% { transform: translateX(-50%); }
+            }
+          `}
+        </style>
       </div>
-    </header>
-    <div
-      className="maximalist-ticker"
-      style={{
-        display: 'none',
-        backgroundColor: '#FFE600',
-        color: '#000000',
-        borderBottom: '2px solid #000000',
-        padding: '3px 16px',
-        fontFamily: 'var(--font-mono)',
-        fontSize: '10px',
-        fontWeight: 800,
-        letterSpacing: '0.08em',
-        overflow: 'hidden',
-        whiteSpace: 'nowrap',
-        textTransform: 'uppercase',
-        userSelect: 'none',
-      }}
-    >
-      <span>
-        ⚡ TREMOR RISK CONTAGION ENGINE ⚡ 5,245 ACTIVE BORROWERS · 30 WARDS · 177 CENTRES · 78 WEEKS SIMULATION ⚡ REAL-TIME LATENT STRESS ⚡ COUNTERFACTUAL ABLATION ATTRIBUTION ⚡
-      </span>
-    </div>
     </>
   );
 };

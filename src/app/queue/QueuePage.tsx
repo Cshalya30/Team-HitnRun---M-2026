@@ -98,41 +98,75 @@ export const QueuePage: React.FC<QueuePageProps> = ({
       <div
         style={{
           padding: 'var(--space-16) var(--space-24)',
-          borderBottom: '1px solid var(--hairline)',
+          borderBottom: '2.5px solid var(--hairline)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 'var(--space-12)',
           flexShrink: 0,
         }}
       >
-        <div>
-          <div
-            style={{
-              fontSize: '14px',
-              fontWeight: 700,
-              fontFamily: 'var(--font-display)',
-              color: 'var(--ink-0)',
-            }}
-          >
-            Conversation Queue
-          </div>
-          <div style={{ fontSize: '12px', color: 'var(--ink-2)', marginTop: '2px' }}>
-            Borrowers needing a conversation this week, ranked by latent stress
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-12)' }}>
+          <span className="synth-jack" />
+          <div>
+            <div
+              style={{
+                fontSize: '18px',
+                fontWeight: 900,
+                fontFamily: 'var(--font-display)',
+                color: 'var(--ink-0)',
+                textTransform: 'uppercase',
+                letterSpacing: '-0.02em',
+              }}
+            >
+              Loan Officer Worklist Queue
+            </div>
+            <div style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--ink-2)', marginTop: '2px' }}>
+              Ranked by latent contagion stress · 8-signal counterfactual decomposition
+            </div>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 'var(--space-16)', alignItems: 'center' }}>
-          <div className="tabular-num" style={{ fontSize: '12px' }}>
-            <span style={{ color: 'var(--induced)', fontWeight: 500 }}>
-              {escalatedCount} escalated
-            </span>
-            <span style={{ color: 'var(--ink-2)', margin: '0 var(--space-8)' }}>/</span>
-            <span style={{ color: 'var(--idio)' }}>
-              {flaggedCount} flagged
-            </span>
-            <span style={{ color: 'var(--ink-2)', margin: '0 var(--space-8)' }}>/</span>
-            <span style={{ color: 'var(--signal)' }}>
-              {flaggedCount - escalatedCount} suppressed
-            </span>
+
+        {/* Maximalist Stats Badges */}
+        <div style={{ display: 'flex', gap: 'var(--space-8)', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div
+            className="status-badge"
+            style={{
+              backgroundColor: 'var(--surface-1)',
+              borderColor: 'var(--induced)',
+              boxShadow: '2px 2px 0px var(--induced)',
+              color: 'var(--induced)',
+            }}
+          >
+            <span>● ESCALATED:</span>
+            <span className="tabular-num" style={{ fontWeight: 900 }}>{escalatedCount}</span>
+          </div>
+
+          <div
+            className="status-badge"
+            style={{
+              backgroundColor: 'var(--surface-1)',
+              borderColor: 'var(--idio)',
+              boxShadow: '2px 2px 0px var(--idio)',
+              color: 'var(--idio)',
+            }}
+          >
+            <span>● FLAGGED:</span>
+            <span className="tabular-num" style={{ fontWeight: 900 }}>{flaggedCount}</span>
+          </div>
+
+          <div
+            className="status-badge"
+            style={{
+              backgroundColor: 'var(--surface-1)',
+              borderColor: 'var(--signal)',
+              boxShadow: '2px 2px 0px var(--signal)',
+              color: 'var(--signal)',
+            }}
+          >
+            <span>● SUPPRESSED:</span>
+            <span className="tabular-num" style={{ fontWeight: 900 }}>{flaggedCount - escalatedCount}</span>
           </div>
         </div>
       </div>
@@ -142,7 +176,7 @@ export const QueuePage: React.FC<QueuePageProps> = ({
         style={{
           flex: 1,
           display: 'grid',
-          gridTemplateColumns: selectedBorrowerId ? 'minmax(0, 60%) minmax(0, 40%)' : '1fr',
+          gridTemplateColumns: selectedBorrowerId ? 'minmax(0, 58%) minmax(0, 42%)' : '1fr',
           gap: 'var(--space-16)',
           padding: 'var(--space-16) var(--space-24)',
           overflow: 'hidden',
@@ -150,7 +184,7 @@ export const QueuePage: React.FC<QueuePageProps> = ({
         }}
       >
         {/* Borrower worklist */}
-        <div style={{ overflow: 'auto', minHeight: 0 }}>
+        <div style={{ overflow: 'auto', minHeight: 0 }} className="surface-panel">
           <AccessibleBorrowerTable
             borrowers={sortedBorrowers}
             centres={portfolio.centres}

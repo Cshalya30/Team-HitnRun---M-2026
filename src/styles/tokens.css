@@ -1,43 +1,63 @@
 @import "tailwindcss";
 
 :root {
-  /* PART 3: Color Surfaces - ACTUAL PURE PITCH BLACK (ZERO BLUE TINT) */
-  --surface-0: #000000; /* pure pitch black page background */
-  --surface-1: #050505; /* actual neutral black cockpit panel surface */
-  --surface-2: #0E0E0E; /* actual neutral dark surface for hover/active */
-  --surface-3: #181818; /* actual neutral dark surface for popovers/tooltips */
-  --hairline: #222222;  /* crisp 1px neutral dark border, zero navy tint */
+  /* =========================================================================
+     MAXIMALISM DARK (CYBER-BRUTALIST ACID NEON) — DEFAULT THEME
+     ========================================================================= */
+  --surface-0: #000000; /* Pure pitch black canvas */
+  --surface-1: #0A0A0A; /* Jet black cockpit panel */
+  --surface-2: #141414; /* Elevated dark card surface */
+  --surface-3: #1F1F1F; /* High-contrast popover/tooltip surface */
+  --hairline: #2E2E2E;  /* Base hairline */
 
-  /* Inks: maximum contrast typography */
-  --ink-0: #FFFFFF;     /* pure white primary text and numerals */
-  --ink-1: #E5E5E5;     /* high-contrast secondary text */
-  --ink-2: #A3A3A3;     /* readable neutral tertiary labels */
+  /* Inks: Maximum contrast typography */
+  --ink-0: #FFFFFF;     /* Pure white primary text */
+  --ink-1: #E2E8F0;     /* High-contrast silver secondary */
+  --ink-2: #94A3B8;     /* Readable tertiary labels */
 
-  /* Stress Semantics: The only three accents that carry meaning. Never decorative. */
-  --idio: #E8C468;      /* idiosyncratic (amber, circle ●) */
-  --induced: #E05A6B;   /* induced / transmitted (red, triangle ▲) */
-  --covariate: #4FA8D8; /* covariate / area-wide (blue, square ■) */
+  /* High-Voltage Acid Neon Semantics */
+  --idio: #FFE600;      /* Electric Neon Yellow (own shock) */
+  --induced: #FF007F;   /* Hot Neon Pink / Fuchsia (contagion) */
+  --covariate: #00F0FF; /* Electric Cyber Cyan (area-wide) */
+  --signal: #00FF66;    /* Acid Lime Green (success / suppressed) */
+  --warn: #FFE600;      /* Electric Yellow */
+  --danger: #FF007F;    /* Hot Pink */
+  --focus: #00F0FF;     /* Cyber Cyan focus ring */
 
-  --signal: #7BE0B0;    /* positive: recovered, prevented, success */
-  --warn: #E8C468;      /* reuse --idio for warning-level status */
-  --danger: #E05A6B;    /* reuse --induced for critical status */
-  --focus: var(--ink-0);     /* focus ring and text-selection ONLY: never button or brand */
+  /* Special Neon Palette */
+  --neon-cyan: #00F0FF;
+  --neon-pink: #FF007F;
+  --neon-green: #00FF66;
+  --neon-yellow: #FFE600;
+  --neon-orange: #FF5500;
+
+  /* Brutalist Shadows & Framing */
+  --card-border: 2.5px solid #2A2A2A;
+  --card-border-active: 2.5px solid #00FF66;
+  --shadow-brutal: 4px 4px 0px #00FF66;
+  --shadow-brutal-sm: 2px 2px 0px #00FF66;
+  --shadow-brutal-pink: 4px 4px 0px #FF007F;
+  --shadow-brutal-cyan: 4px 4px 0px #00F0FF;
+  --shadow-brutal-yellow: 4px 4px 0px #FFE600;
+  --shadow-brutal-white: 4px 4px 0px #FFFFFF;
 
   /* Opacity Scale */
-  --op-disabled: 0.4;
-  --op-muted: 0.65;
-  --op-hover-fill: 0.08;
+  --op-disabled: 0.35;
+  --op-muted: 0.7;
+  --op-hover-fill: 0.12;
 
   /* Typography */
   --font-display: 'Bricolage Grotesque', sans-serif;
   --font-body: 'Inter', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 
-  /* Space Scale: 4 8 12 16 24 32 48 64 96 */
+  /* Space Scale */
   --space-4: 4px;
+  --space-6: 6px;
   --space-8: 8px;
   --space-12: 12px;
   --space-16: 16px;
+  --space-20: 20px;
   --space-24: 24px;
   --space-32: 32px;
   --space-48: 48px;
@@ -46,11 +66,11 @@
 
   /* Radii */
   --radius-control: 4px;
-  --radius-panel: 10px;
+  --radius-panel: 6px;
   --radius-pill: 999px;
   --radius-flat: 0px;
 
-  /* Z-Index Hierarchy (Part 2.4) */
+  /* Z-Index */
   --z-base: 0;
   --z-panel: 10;
   --z-sticky: 20;
@@ -66,186 +86,50 @@
   --motion-node: 400ms ease-out;
 }
 
+/* =========================================================================
+   MAXIMALISM BRIGHT (POP NEO-BRUTALIST) — LIGHT THEME
+   ========================================================================= */
 [data-theme="light"] {
-  --surface-0: #FFFFFF;
-  --surface-1: #F8F9FA;
-  --surface-2: #F1F3F5;
-  --surface-3: #E9ECEF;
-  --hairline: #E2E8F0;
+  --surface-0: #FFFDF0; /* Warm pop creamy canvas */
+  --surface-1: #FFFFFF; /* Crisp paper white card surface */
+  --surface-2: #FFE600; /* Vibrant canary yellow */
+  --surface-3: #FF2A85; /* Electric magenta pop */
+  --hairline: #000000;  /* Bold solid black border */
 
-  --ink-0: #0F172A;
-  --ink-1: #334155;
-  --ink-2: #64748B;
+  --ink-0: #000000;     /* Maximum impact black */
+  --ink-1: #1E293B;     /* Dark slate */
+  --ink-2: #475569;     /* Medium slate */
 
-  --idio: #D97706;
-  --induced: #DC2626;
-  --covariate: #0284C7;
-  --signal: #059669;
-  --warn: #D97706;
-  --danger: #DC2626;
-  --focus: var(--ink-0);
-}
+  /* Saturated Pop Primary Accents */
+  --idio: #FFE600;      /* Canary Yellow */
+  --induced: #FF2A3B;   /* Punch Red */
+  --covariate: #0038FF; /* Electric Cobalt Blue */
+  --signal: #00D06C;    /* Emerald Pop Green */
+  --warn: #FFE600;      /* Canary Yellow */
+  --danger: #FF2A3B;    /* Punch Red */
+  --focus: #000000;     /* Pitch Black */
 
-[data-theme="maximalist"] {
-  --surface-0: #FFFDF0; /* warm pop creamy canvas */
-  --surface-1: #FFFFFF; /* crisp paper white card surface */
-  --surface-2: #FFE600; /* vibrant canary yellow */
-  --surface-3: #FF2A85; /* electric magenta pop */
-  --hairline: #000000;  /* bold solid black border */
+  /* Special Pop Palette */
+  --neon-cyan: #0038FF;
+  --neon-pink: #FF007A;
+  --neon-green: #00D06C;
+  --neon-yellow: #FFE600;
+  --neon-orange: #FF5500;
 
-  --ink-0: #000000;     /* maximum impact black */
-  --ink-1: #1E293B;     /* dark slate */
-  --ink-2: #475569;     /* medium slate */
-
-  --idio: #FFE600;      /* canary yellow */
-  --induced: #FF2A3B;   /* flaming punch red */
-  --covariate: #0038FF; /* electric cobalt blue */
-  --signal: #00D06C;    /* emerald pop green */
-  --warn: #FFE600;      /* canary yellow */
-  --danger: #FF2A3B;    /* punch red */
-  --focus: #000000;
-
+  /* Brutalist Hard Black Shadows */
+  --card-border: 2.5px solid #000000;
+  --card-border-active: 2.5px solid #0038FF;
   --shadow-brutal: 4px 4px 0px #000000;
   --shadow-brutal-sm: 2px 2px 0px #000000;
-  --shadow-brutal-lg: 6px 6px 0px #000000;
-  --radius-control: 4px;
-  --radius-panel: 6px;
+  --shadow-brutal-pink: 4px 4px 0px #000000;
+  --shadow-brutal-cyan: 4px 4px 0px #000000;
+  --shadow-brutal-yellow: 4px 4px 0px #000000;
+  --shadow-brutal-white: 4px 4px 0px #000000;
 }
 
-/* Neo-Brutalist & Pop-Maximalist component overrides */
-[data-theme="maximalist"] .surface-panel {
-  border: 2.5px solid #000000 !important;
-  box-shadow: 4px 4px 0px #000000 !important;
-  background-color: #FFFFFF !important;
-}
-
-[data-theme="maximalist"] .btn-primary {
-  background-color: #FFE600 !important;
-  color: #000000 !important;
-  border: 2.5px solid #000000 !important;
-  box-shadow: 3px 3px 0px #000000 !important;
-  font-weight: 700 !important;
-}
-
-[data-theme="maximalist"] .btn-secondary {
-  background-color: #FFFFFF !important;
-  color: #000000 !important;
-  border: 2.5px solid #000000 !important;
-  box-shadow: 3px 3px 0px #000000 !important;
-  font-weight: 700 !important;
-}
-
-[data-theme="maximalist"] .btn-ghost {
-  border: 2px solid #000000 !important;
-  box-shadow: 2px 2px 0px #000000 !important;
-  background-color: #FFFFFF !important;
-  color: #000000 !important;
-  font-weight: 700 !important;
-}
-
-[data-theme="maximalist"] .btn-primary:hover,
-[data-theme="maximalist"] .btn-secondary:hover,
-[data-theme="maximalist"] .btn-ghost:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 5px 5px 0px #000000 !important;
-}
-
-[data-theme="maximalist"] .btn-primary:active,
-[data-theme="maximalist"] .btn-secondary:active,
-[data-theme="maximalist"] .btn-ghost:active {
-  transform: translate(2px, 2px);
-  box-shadow: 1px 1px 0px #000000 !important;
-}
-
-[data-theme="maximalist"] header.boot-topbar {
-  border-bottom: 2.5px solid #000000 !important;
-  background-color: #FFE600 !important;
-}
-
-[data-theme="maximalist"] table.tremor-table,
-[data-theme="maximalist"] table.dense-table {
-  border: 2px solid #000000 !important;
-}
-
-[data-theme="maximalist"] table.tremor-table th,
-[data-theme="maximalist"] table.dense-table th {
-  background-color: #FFE600 !important;
-  color: #000000 !important;
-  border-bottom: 2.5px solid #000000 !important;
-  font-weight: 800 !important;
-}
-
-[data-theme="maximalist"] table.tremor-table tbody tr:hover,
-[data-theme="maximalist"] table.dense-table tbody tr:hover {
-  background-color: #FFF388 !important;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 0px #000000 !important;
-}
-
-[data-theme="maximalist"] .boot-scrubber > div,
-[data-theme="maximalist"] div[aria-label="Simulation Scrubber and Timeline"] {
-  border-bottom: 2.5px solid #000000 !important;
-  background-color: #FFFFFF !important;
-}
-
-[data-theme="maximalist"] .scenario-chip {
-  border: 2px solid #000000 !important;
-  background-color: #FFFFFF !important;
-  color: #000000 !important;
-  border-radius: 4px !important;
-  font-weight: 700 !important;
-  box-shadow: 2px 2px 0px #000000 !important;
-  transition: all 100ms ease !important;
-}
-
-[data-theme="maximalist"] .scenario-chip:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 4px 4px 0px #000000 !important;
-  background-color: #FFF388 !important;
-}
-
-[data-theme="maximalist"] .scenario-chip:active {
-  transform: translate(2px, 2px);
-  box-shadow: 1px 1px 0px #000000 !important;
-}
-
-[data-theme="maximalist"] .status-badge {
-  border: 2px solid #000000 !important;
-  box-shadow: 2px 2px 0px #000000 !important;
-  font-weight: 800 !important;
-  border-radius: 4px !important;
-}
-
-[data-theme="maximalist"] div[aria-label^="Diagnostic Dossier"] {
-  border: 2.5px solid #000000 !important;
-  box-shadow: 4px 4px 0px #000000 !important;
-  background-color: #FFFFFF !important;
-}
-
-[data-theme="maximalist"] div[aria-label="Simulation Scenario Injections"] {
-  border: 2.5px solid #000000 !important;
-  box-shadow: 4px 4px 0px #000000 !important;
-  background-color: #FFFFFF !important;
-}
-
-[data-theme="maximalist"] div[role="dialog"] > div {
-  border: 3.5px solid #000000 !important;
-  box-shadow: 8px 8px 0px #000000 !important;
-  background-color: #FFFFFF !important;
-}
-
-[data-theme="maximalist"] .maximalist-ticker {
-  display: block !important;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  :root {
-    --motion-hover: 0ms;
-    --motion-panel: 0ms;
-    --motion-view: 0ms;
-    --motion-node: 0ms;
-  }
-}
+/* =========================================================================
+   GLOBAL NEO-BRUTALIST COMPONENT OVERRIDES (BOTH LIGHT & DARK)
+   ========================================================================= */
 
 *, *::before, *::after {
   box-sizing: border-box;
@@ -284,47 +168,82 @@ span[data-num] {
 /* Panel surface */
 .surface-panel {
   background-color: var(--surface-1);
-  border: 1px solid var(--hairline);
+  border: 2.5px solid var(--hairline);
   border-radius: var(--radius-panel);
   padding: var(--space-16);
+  box-shadow: var(--shadow-brutal);
+  transition: transform var(--motion-hover), box-shadow var(--motion-hover);
 }
 
-/* Button Variants (Part 4.6: 3 variants only) */
-/* 1. Primary: solid --surface-2 fill, --ink-0 text, used once per screen */
+:root:not([data-theme="light"]) .surface-panel {
+  border: 2.5px solid #282828;
+  box-shadow: 4px 4px 0px #151515;
+}
+
+:root:not([data-theme="light"]) .surface-panel:hover {
+  border-color: #404040;
+}
+
+/* Button Variants: Tactile Physical Neo-Brutalist Arcade Buttons */
 .btn-primary {
-  font-family: var(--font-body);
+  font-family: var(--font-mono);
   font-size: 12px;
-  font-weight: 500;
-  color: var(--ink-0);
-  background-color: var(--surface-2);
-  border: 1px solid var(--hairline);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #000000;
+  background-color: var(--idio);
+  border: 2.5px solid #000000;
   border-radius: var(--radius-control);
-  padding: var(--space-4) var(--space-12);
-  height: 32px;
+  padding: var(--space-4) var(--space-16);
+  height: 34px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-8);
-  transition: background-color var(--motion-hover), border-color var(--motion-hover);
+  box-shadow: 3px 3px 0px #000000;
+  transition: transform 100ms ease, box-shadow 100ms ease, background-color 120ms ease;
 }
+
+:root:not([data-theme="light"]) .btn-primary {
+  background-color: #00FF66;
+  color: #000000;
+  border: 2.5px solid #00FF66;
+  box-shadow: 3px 3px 0px #00FF66;
+}
+
 .btn-primary:hover:not(:disabled) {
-  background-color: #242B3A;
-  border-color: #384259;
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0px #000000;
 }
+:root:not([data-theme="light"]) .btn-primary:hover:not(:disabled) {
+  box-shadow: 5px 5px 0px #00FF66;
+  background-color: #33FF85;
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0px #000000;
+}
+:root:not([data-theme="light"]) .btn-primary:active:not(:disabled) {
+  box-shadow: 1px 1px 0px #00FF66;
+}
+
 .btn-primary:disabled {
   opacity: var(--op-disabled);
   cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
-/* 2. Secondary: hairline border, transparent fill, --ink-1 text */
 .btn-secondary {
-  font-family: var(--font-body);
+  font-family: var(--font-mono);
   font-size: 12px;
-  font-weight: 500;
-  color: var(--ink-1);
-  background-color: transparent;
-  border: 1px solid var(--hairline);
+  font-weight: 700;
+  color: var(--ink-0);
+  background-color: var(--surface-1);
+  border: 2px solid var(--hairline);
   border-radius: var(--radius-control);
   padding: var(--space-4) var(--space-12);
   height: 32px;
@@ -333,73 +252,137 @@ span[data-num] {
   align-items: center;
   justify-content: center;
   gap: var(--space-8);
-  transition: color var(--motion-hover), border-color var(--motion-hover);
+  box-shadow: 2px 2px 0px var(--hairline);
+  transition: transform 100ms ease, box-shadow 100ms ease, background-color 120ms ease;
 }
+
+:root:not([data-theme="light"]) .btn-secondary {
+  border: 2px solid #FFFFFF;
+  color: #FFFFFF;
+  box-shadow: 3px 3px 0px #FFFFFF;
+  background-color: #0A0A0A;
+}
+
 .btn-secondary:hover:not(:disabled) {
-  color: var(--ink-0);
-  border-color: #384259;
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0px var(--hairline);
 }
+:root:not([data-theme="light"]) .btn-secondary:hover:not(:disabled) {
+  box-shadow: 5px 5px 0px #FFFFFF;
+  background-color: #161616;
+}
+
+.btn-secondary:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0px var(--hairline);
+}
+:root:not([data-theme="light"]) .btn-secondary:active:not(:disabled) {
+  box-shadow: 1px 1px 0px #FFFFFF;
+}
+
 .btn-secondary:disabled {
   opacity: var(--op-disabled);
   cursor: not-allowed;
 }
 
-/* 3. Ghost: no border, no fill, --ink-1 icon, --ink-0 on hover */
 .btn-ghost {
-  font-family: var(--font-body);
+  font-family: var(--font-mono);
   font-size: 12px;
-  color: var(--ink-1);
+  color: var(--ink-0);
   background: transparent;
-  border: none;
+  border: 2px solid transparent;
+  border-radius: var(--radius-control);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-4);
-  transition: color var(--motion-hover);
+  padding: var(--space-4) var(--space-8);
+  transition: all 120ms ease;
 }
+
 .btn-ghost:hover:not(:disabled) {
-  color: var(--ink-0);
+  border-color: var(--hairline);
+  background-color: var(--surface-2);
+  box-shadow: 2px 2px 0px var(--hairline);
 }
+
 .btn-ghost:disabled {
   opacity: var(--op-disabled);
   cursor: not-allowed;
 }
 
-/* Scenario Chips (Part 4.7) */
+/* Scenario Chips */
 .scenario-chip {
   height: 28px;
   padding: 0 var(--space-12);
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--hairline);
-  background-color: transparent;
-  color: var(--ink-1);
-  font-size: 12px;
-  font-weight: 500;
+  border-radius: var(--radius-control);
+  border: 2px solid var(--hairline);
+  background-color: var(--surface-1);
+  color: var(--ink-0);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: var(--space-8);
-  transition: border-color var(--motion-hover), color var(--motion-hover);
-}
-.scenario-chip:hover {
-  color: var(--ink-0);
-  border-color: #384259;
-}
-.scenario-chip.active-idio {
-  border-color: var(--idio);
-  color: var(--ink-0);
-}
-.scenario-chip.active-induced {
-  border-color: var(--induced);
-  color: var(--ink-0);
-}
-.scenario-chip.active-covariate {
-  border-color: var(--covariate);
-  color: var(--ink-0);
+  box-shadow: 2px 2px 0px var(--hairline);
+  transition: all 100ms ease;
 }
 
-/* Status Badges (Part 4.7) */
+:root:not([data-theme="light"]) .scenario-chip {
+  border: 2px solid #333333;
+  box-shadow: 2px 2px 0px #000000;
+  background-color: #0A0A0A;
+}
+
+.scenario-chip:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0px var(--hairline);
+}
+:root:not([data-theme="light"]) .scenario-chip:hover {
+  border-color: #00F0FF;
+  box-shadow: 3px 3px 0px #00F0FF;
+}
+
+.scenario-chip:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0px var(--hairline);
+}
+
+.scenario-chip.active-idio {
+  background-color: var(--idio) !important;
+  color: #000000 !important;
+  border-color: #000000 !important;
+  box-shadow: 3px 3px 0px #000000 !important;
+}
+
+.scenario-chip.active-induced {
+  background-color: var(--induced) !important;
+  color: #FFFFFF !important;
+  border-color: #000000 !important;
+  box-shadow: 3px 3px 0px #000000 !important;
+}
+:root:not([data-theme="light"]) .scenario-chip.active-induced {
+  background-color: #FF007F !important;
+  border-color: #FF007F !important;
+  box-shadow: 3px 3px 0px #FF007F !important;
+}
+
+.scenario-chip.active-covariate {
+  background-color: var(--covariate) !important;
+  color: #FFFFFF !important;
+  border-color: #000000 !important;
+  box-shadow: 3px 3px 0px #000000 !important;
+}
+:root:not([data-theme="light"]) .scenario-chip.active-covariate {
+  background-color: #00F0FF !important;
+  color: #000000 !important;
+  border-color: #00F0FF !important;
+  box-shadow: 3px 3px 0px #00F0FF !important;
+}
+
+/* Status Badges */
 .badge-status,
 .status-badge {
   display: inline-flex;
@@ -407,73 +390,259 @@ span[data-num] {
   gap: var(--space-4);
   font-family: var(--font-mono);
   font-size: 11px;
-  font-weight: 500;
-  padding: 2px var(--space-8);
-  border-radius: var(--radius-pill);
+  font-weight: 800;
+  padding: 3px var(--space-8);
+  border-radius: var(--radius-control);
   background-color: var(--surface-2);
-  color: var(--ink-1);
+  color: var(--ink-0);
   font-variant-numeric: tabular-nums;
-  border: 1px solid var(--hairline);
+  border: 2px solid var(--hairline);
+  box-shadow: 2px 2px 0px var(--hairline);
 }
 
-/* Floating Status Badges (z-index 50) */
-.badge-floating {
-  z-index: var(--z-toast);
-  background-color: var(--surface-3);
-  border: 1px solid var(--hairline);
-  border-radius: var(--radius-pill);
-  padding: 2px var(--space-8);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--ink-1);
+:root:not([data-theme="light"]) .badge-status,
+:root:not([data-theme="light"]) .status-badge {
+  border: 2px solid #333333;
+  box-shadow: 2px 2px 0px #000000;
 }
 
-/* Data Table: 32px row height, sticky header (Part 4.8) */
+/* Data Tables */
 table.tremor-table,
 table.dense-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 12px;
-  border-radius: var(--radius-table);
+  border: 2px solid var(--hairline);
 }
 
 table.tremor-table th,
 table.dense-table th {
-  height: 32px;
+  height: 36px;
   padding: 0 var(--space-12);
   text-align: left;
-  font-weight: 500;
+  font-family: var(--font-mono);
+  font-weight: 800;
   font-size: 11px;
   text-transform: uppercase;
-  color: var(--ink-2);
-  border-bottom: 1px solid var(--hairline);
-  background-color: var(--surface-1);
+  letter-spacing: 0.05em;
+  color: #000000;
+  background-color: var(--idio);
+  border-bottom: 2.5px solid var(--hairline);
   position: sticky;
   top: 0;
   z-index: var(--z-sticky);
 }
 
-table.tremor-table td,
-table.dense-table td {
-  height: 32px;
-  padding: 0 var(--space-12);
-  border-bottom: 1px solid var(--hairline);
-  color: var(--ink-1);
+:root:not([data-theme="light"]) table.tremor-table th,
+:root:not([data-theme="light"]) table.dense-table th {
+  background-color: #181818;
+  color: #00FF66;
+  border-bottom: 2.5px solid #00FF66;
 }
 
-table.tremor-table tr:hover td,
-table.dense-table tr:hover td {
-  background-color: var(--surface-2);
+table.tremor-table td,
+table.dense-table td {
+  height: 34px;
+  padding: 0 var(--space-12);
+  border-bottom: 1px solid var(--hairline);
   color: var(--ink-0);
 }
 
-/* Loading Skeleton (No shimmer per Part 4.3 & 4.4) */
-.skeleton-static {
-  background-color: var(--surface-2);
-  border-radius: var(--radius-control);
+table.tremor-table tr,
+table.dense-table tr {
+  transition: transform 100ms ease, background-color 100ms ease, box-shadow 100ms ease;
 }
 
-/* Responsive Stacking below 1024px (Part 11) */
+table.tremor-table tbody tr:hover,
+table.dense-table tbody tr:hover {
+  background-color: #FFF388;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 0px var(--hairline);
+}
+
+:root:not([data-theme="light"]) table.tremor-table tbody tr:hover,
+:root:not([data-theme="light"]) table.dense-table tbody tr:hover {
+  background-color: #1A1A1A;
+  color: #00FF66;
+  box-shadow: 0 3px 0px #00FF66;
+}
+
+/* =========================================================================
+   MAXIMALIST SPECIAL UTILITIES (HAZARD STRIPES, VU METER, HARDWARE JACKS)
+   ========================================================================= */
+
+/* Diagonal Hazard Tape Stripes */
+.hazard-stripe-yellow {
+  background: repeating-linear-gradient(
+    -45deg,
+    #FFE600,
+    #FFE600 10px,
+    #000000 10px,
+    #000000 20px
+  ) !important;
+}
+
+.hazard-stripe-neon {
+  background: repeating-linear-gradient(
+    -45deg,
+    #00FF66,
+    #00FF66 10px,
+    #000000 10px,
+    #000000 20px
+  ) !important;
+}
+
+.hazard-stripe-pink {
+  background: repeating-linear-gradient(
+    -45deg,
+    #FF007F,
+    #FF007F 10px,
+    #000000 10px,
+    #000000 20px
+  ) !important;
+}
+
+/* Stamped Neo-Brutalist Badge */
+.brutal-stamp {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border: 2px solid #000000;
+  box-shadow: 2px 2px 0px #000000;
+  transform: rotate(-2deg);
+}
+
+:root:not([data-theme="light"]) .brutal-stamp {
+  border: 2px solid #00FF66;
+  box-shadow: 2px 2px 0px #00FF66;
+  color: #00FF66;
+  background-color: #000000;
+}
+
+/* Synthesizer Hardware 1/4" Port Jack */
+.synth-jack {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2.5px solid #000000;
+  background: radial-gradient(circle, #000000 40%, #CCCCCC 41%, #CCCCCC 70%, #000000 71%);
+  display: inline-block;
+  box-shadow: 1px 1px 0px #000000;
+}
+
+:root:not([data-theme="light"]) .synth-jack {
+  border: 2.5px solid #00F0FF;
+  background: radial-gradient(circle, #000000 40%, #00F0FF 41%, #00F0FF 70%, #000000 71%);
+  box-shadow: 0 0 6px rgba(0, 240, 255, 0.4);
+}
+
+/* Segmented Analog VU Meter */
+.vu-meter-track {
+  display: flex;
+  gap: 3px;
+  padding: 4px;
+  background-color: #000000;
+  border: 2px solid var(--hairline);
+  border-radius: 4px;
+  box-shadow: 2px 2px 0px var(--hairline);
+}
+
+:root:not([data-theme="light"]) .vu-meter-track {
+  border: 2px solid #333333;
+  box-shadow: 2px 2px 0px #00FF66;
+}
+
+.vu-segment {
+  flex: 1;
+  height: 10px;
+  border-radius: 1px;
+  opacity: 0.2;
+  transition: opacity 120ms ease, background-color 120ms ease;
+}
+
+.vu-segment.active-green {
+  background-color: var(--signal);
+  opacity: 1;
+  box-shadow: 0 0 4px var(--signal);
+}
+
+.vu-segment.active-yellow {
+  background-color: var(--idio);
+  opacity: 1;
+  box-shadow: 0 0 4px var(--idio);
+}
+
+.vu-segment.active-red {
+  background-color: var(--induced);
+  opacity: 1;
+  box-shadow: 0 0 4px var(--induced);
+}
+
+/* Ticker Tape Marquee */
+.maximalist-ticker {
+  display: block !important;
+  background-color: #FFE600;
+  color: #000000;
+  border-bottom: 2.5px solid #000000;
+  padding: 3px 16px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  overflow: hidden;
+  white-space: nowrap;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+:root:not([data-theme="light"]) .maximalist-ticker {
+  background-color: #00FF66;
+  color: #000000;
+  border-bottom: 2.5px solid #00FF66;
+}
+
+/* Modal Dialog Brutalist Overhaul */
+div[role="dialog"] > div {
+  border: 3.5px solid #000000 !important;
+  box-shadow: 8px 8px 0px #000000 !important;
+  background-color: var(--surface-1) !important;
+}
+
+:root:not([data-theme="light"]) div[role="dialog"] > div {
+  border: 3.5px solid #00FF66 !important;
+  box-shadow: 8px 8px 0px #00FF66 !important;
+  background-color: #0A0A0A !important;
+}
+
+/* Scrubber Bar Top Border */
+.boot-scrubber > div,
+div[aria-label="Simulation Scrubber and Timeline"] {
+  border-bottom: 2.5px solid var(--hairline) !important;
+  background-color: var(--surface-1) !important;
+}
+
+/* Topbar Header */
+header.boot-topbar {
+  border-bottom: 2.5px solid var(--hairline) !important;
+  background-color: var(--surface-0) !important;
+}
+
+[data-theme="light"] header.boot-topbar {
+  background-color: #FFE600 !important;
+  border-bottom: 2.5px solid #000000 !important;
+}
+
+:root:not([data-theme="light"]) header.boot-topbar {
+  background-color: #000000 !important;
+  border-bottom: 2.5px solid #282828 !important;
+}
+
+/* Layout and Transitions */
 .cockpit-container {
   display: flex;
   flex-direction: column;
@@ -511,31 +680,7 @@ table.dense-table tr:hover td {
   }
 }
 
-/* Hover elevation: translateY(-2px) + soft shadow, 120ms */
-table.tremor-table tr,
-table.dense-table tr {
-  transition: transform 120ms cubic-bezier(.2,0,.4,1), box-shadow 120ms cubic-bezier(.2,0,.4,1);
-}
-
-table.tremor-table tbody tr:hover,
-table.dense-table tbody tr:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  table.tremor-table tr,
-  table.dense-table tr {
-    transition: none;
-  }
-  table.tremor-table tbody tr:hover,
-  table.dense-table tbody tr:hover {
-    transform: none;
-    box-shadow: none;
-  }
-}
-
-/* Route transition: 280ms cubic-bezier(.16,1,.3,1) per §4.1 */
+/* Route transition */
 .route-enter {
   animation: routeEnter 280ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
@@ -551,7 +696,7 @@ table.dense-table tbody tr:hover {
   }
 }
 
-/* Boot sequence animations per §4.2 */
+/* Boot animations */
 .boot-topbar {
   animation: bootFadeIn 120ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
@@ -583,9 +728,11 @@ table.dense-table tbody tr:hover {
 @media (prefers-reduced-motion: reduce) {
   .route-enter,
   .boot-topbar,
-  .boot-scrubber {
+  .boot-scrubber,
+  table.tremor-table tr,
+  table.dense-table tr {
     animation: none !important;
-    opacity: 1 !important;
+    transition: none !important;
     transform: none !important;
   }
 }

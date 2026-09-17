@@ -358,12 +358,10 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, width, height);
 
-    const currentTheme = (typeof document !== 'undefined' ? document.documentElement.getAttribute('data-theme') : null) || 'dark';
-    const isMaximalist = currentTheme === 'maximalist';
-    const isLightMode = currentTheme === 'light';
+    const isLightMode = (typeof document !== 'undefined' ? document.documentElement.getAttribute('data-theme') : null) === 'light';
 
-    // Canvas Background: Maximalist warm cream (#FFFDF0), Light white (#FFFFFF), or Dark pitch black (#000000)
-    ctx.fillStyle = isMaximalist ? '#FFFDF0' : (isLightMode ? '#FFFFFF' : '#000000');
+    // Canvas Background: Maximalist Bright warm cream (#FFFDF0) or Maximalist Dark pitch black (#000000)
+    ctx.fillStyle = isLightMode ? '#FFFDF0' : '#000000';
     ctx.fillRect(0, 0, width, height);
 
     ctx.translate(transform.x, transform.y);
@@ -413,11 +411,11 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
 
     // 1. Batched Edges Rendering (Draws 10,000+ links in exactly 2 GPU draw calls)
     if (edgeBaseOpacity > 0 || selectedBorrowerId) {
-      const normalOpacity = selectedBorrowerId ? 0.03 : edgeBaseOpacity;
-      const edgeRgb = (isMaximalist || isLightMode) ? '0, 0, 0' : '255, 255, 255';
-      const edgeAlpha = isMaximalist ? (selectedBorrowerId ? 0.04 : 0.16) : normalOpacity;
-      ctx.strokeStyle = `rgba(${edgeRgb}, ${edgeAlpha.toFixed(3)})`;
-      ctx.lineWidth = selectedBorrowerId ? 0.5 : (isMaximalist ? 1.0 : 0.8);
+      const normalOpacity = selectedBorrowerId ? 0.04 : 0.16;
+      ctx.strokeStyle = isLightMode
+        ? `rgba(0, 0, 0, ${normalOpacity.toFixed(3)})`
+        : `rgba(0, 240, 255, ${(selectedBorrowerId ? 0.05 : 0.18).toFixed(3)})`;
+      ctx.lineWidth = selectedBorrowerId ? 0.6 : 1.0;
       ctx.beginPath();
 
       const highlightedEdges: ForceEdge[] = [];
@@ -442,10 +440,10 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
       }
       ctx.stroke();
 
-      // Highlighted attribution evidence edges (Cobalt Blue in maximalist, dark slate in light, white in dark)
+      // Highlighted attribution evidence edges (Cobalt Blue in Light, Acid Lime in Dark)
       if (highlightedEdges.length > 0) {
-        ctx.strokeStyle = isMaximalist ? '#0038FF' : (isLightMode ? '#0F172A' : '#FFFFFF');
-        ctx.lineWidth = isMaximalist ? 3.0 : 2.4;
+        ctx.strokeStyle = isLightMode ? '#0038FF' : '#00FF66';
+        ctx.lineWidth = 3.2;
         ctx.beginPath();
         for (let i = 0; i < highlightedEdges.length; i++) {
           const e = highlightedEdges[i];
@@ -490,9 +488,9 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
       }
 
       const r = Math.max(2.5, Math.min(8, 2.5 + stress * 5));
-      let color = COLOR_IDIO;
-      if (dominantType === 'induced') color = COLOR_INDUCED;
-      else if (dominantType === 'covariate') color = COLOR_COVARIATE;
+      let color = isLightMode ? '#FFE600' : '#FFE600';
+      if (dominantType === 'induced') color = isLightMode ? '#FF2A3B' : '#FF007F';
+      else if (dominantType === 'covariate') color = isLightMode ? '#0038FF' : '#00F0FF';
 
       ctx.beginPath();
       if (dominantType === 'induced') {
@@ -513,8 +511,8 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
       ctx.fill();
       ctx.globalAlpha = 1.0;
 
-      ctx.strokeStyle = isMaximalist ? '#000000' : (isLightMode ? '#CBD5E1' : COLOR_HAIRLINE);
-      ctx.lineWidth = isMaximalist ? 1.4 : 0.75;
+      ctx.strokeStyle = isLightMode ? '#000000' : '#222222';
+      ctx.lineWidth = 1.4;
       ctx.stroke();
     }
 
@@ -525,19 +523,19 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
 
       // Origin Dashed Halo
       ctx.beginPath();
-      ctx.arc(originNode.x, originNode.y, r + 5, 0, Math.PI * 2);
-      ctx.strokeStyle = isMaximalist ? '#FF007A' : COLOR_INDUCED;
-      ctx.lineWidth = isMaximalist ? 2.5 : 1.5;
+      ctx.arc(originNode.x, originNode.y, r + 6, 0, Math.PI * 2);
+      ctx.strokeStyle = isLightMode ? '#FF007A' : '#FF007F';
+      ctx.lineWidth = 2.5;
       ctx.setLineDash([3, 3]);
       ctx.stroke();
       ctx.setLineDash([]);
 
       ctx.beginPath();
       ctx.arc(originNode.x, originNode.y, r, 0, Math.PI * 2);
-      ctx.fillStyle = COLOR_INDUCED;
+      ctx.fillStyle = isLightMode ? '#FF2A3B' : '#FF007F';
       ctx.fill();
-      ctx.strokeStyle = isMaximalist ? '#000000' : '#FFFFFF';
-      ctx.lineWidth = isMaximalist ? 2 : 1;
+      ctx.strokeStyle = isLightMode ? '#000000' : '#FFFFFF';
+      ctx.lineWidth = 2;
       ctx.stroke();
 
       // Floating Origin Callout Pill
@@ -549,17 +547,16 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
       const boxX = originNode.x - boxW / 2;
       const boxY = originNode.y - r - boxH - 6;
 
-      if (isMaximalist) {
-        ctx.fillStyle = '#000000';
-        ctx.fillRect(boxX + 3, boxY + 3, boxW, boxH);
-      }
-      ctx.fillStyle = isMaximalist ? '#FF2A3B' : (isLightMode ? 'rgba(255, 255, 255, 0.98)' : 'rgba(0, 0, 0, 0.9)');
-      ctx.strokeStyle = isMaximalist ? '#000000' : COLOR_INDUCED;
-      ctx.lineWidth = isMaximalist ? 2 : 1;
+      ctx.fillStyle = isLightMode ? '#000000' : '#FF007F';
+      ctx.fillRect(boxX + 3, boxY + 3, boxW, boxH);
+
+      ctx.fillStyle = isLightMode ? '#FF2A3B' : '#0A0A0A';
+      ctx.strokeStyle = isLightMode ? '#000000' : '#FF007F';
+      ctx.lineWidth = 2;
       ctx.fillRect(boxX, boxY, boxW, boxH);
       ctx.strokeRect(boxX, boxY, boxW, boxH);
 
-      ctx.fillStyle = isMaximalist ? '#FFFFFF' : (isLightMode ? '#0F172A' : '#FFFFFF');
+      ctx.fillStyle = isLightMode ? '#FFFFFF' : '#FF007F';
       ctx.fillText(label, boxX + 7, boxY + 14);
     }
 
@@ -572,27 +569,27 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
       // Outer focus glow ring
       ctx.beginPath();
       ctx.arc(selectedNode.x, selectedNode.y, r + 5, 0, Math.PI * 2);
-      ctx.strokeStyle = isMaximalist ? '#0038FF' : (isLightMode ? '#0F172A' : '#FFFFFF');
-      ctx.lineWidth = isMaximalist ? 3.0 : 2.5;
+      ctx.strokeStyle = isLightMode ? '#0038FF' : '#FF007F';
+      ctx.lineWidth = 3.0;
       ctx.stroke();
 
       // Second soft ring
       ctx.beginPath();
       ctx.arc(selectedNode.x, selectedNode.y, r + 9, 0, Math.PI * 2);
-      ctx.strokeStyle = isMaximalist ? '#FF007A' : (isLightMode ? 'rgba(15, 23, 42, 0.35)' : 'rgba(255, 255, 255, 0.45)');
-      ctx.lineWidth = 1.8;
+      ctx.strokeStyle = isLightMode ? '#FF007A' : '#00F0FF';
+      ctx.lineWidth = 2.0;
       ctx.stroke();
 
       // Node Body
       ctx.beginPath();
       ctx.arc(selectedNode.x, selectedNode.y, r, 0, Math.PI * 2);
-      ctx.fillStyle = isInduced ? COLOR_INDUCED : COLOR_IDIO;
+      ctx.fillStyle = isInduced ? (isLightMode ? '#FF2A3B' : '#FF007F') : (isLightMode ? '#FFE600' : '#FFE600');
       ctx.fill();
-      ctx.strokeStyle = isMaximalist ? '#000000' : (isLightMode ? '#0F172A' : '#FFFFFF');
-      ctx.lineWidth = isMaximalist ? 2.0 : 1.5;
+      ctx.strokeStyle = isLightMode ? '#000000' : '#FFFFFF';
+      ctx.lineWidth = 2.0;
       ctx.stroke();
 
-      // Prominent Floating Nameplate Badge (Pop sticker with offset black drop shadow in maximalist)
+      // Prominent Floating Nameplate Badge (Pop sticker with offset drop shadow)
       const nameText = `${selectedNode.borrower.displayName} (${selectedNode.id.toUpperCase()})`;
       const subText = snap
         ? `Stress: ${(snap.latentStress * 100).toFixed(0)}% · ${(snap.shareInduced * 100).toFixed(0)}% Induced (from ${snap.sourceBorrowerName || 'Peer'})`
@@ -607,13 +604,13 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
       const badgeX = selectedNode.x - badgeW / 2;
       const badgeY = selectedNode.y - r - badgeH - 12;
 
-      if (isMaximalist) {
-        ctx.fillStyle = '#000000';
-        ctx.fillRect(badgeX + 4, badgeY + 4, badgeW, badgeH);
-      }
-      ctx.fillStyle = isMaximalist ? '#FFE600' : (isLightMode ? 'rgba(255, 255, 255, 0.98)' : 'rgba(0, 0, 0, 0.95)');
-      ctx.strokeStyle = isMaximalist ? '#000000' : (isLightMode ? '#0F172A' : '#FFFFFF');
-      ctx.lineWidth = isMaximalist ? 2.5 : 1.5;
+      // Hard offset drop shadow
+      ctx.fillStyle = isLightMode ? '#000000' : '#00FF66';
+      ctx.fillRect(badgeX + 4, badgeY + 4, badgeW, badgeH);
+
+      ctx.fillStyle = isLightMode ? '#FFE600' : '#0A0A0A';
+      ctx.strokeStyle = isLightMode ? '#000000' : '#00FF66';
+      ctx.lineWidth = 2.5;
       ctx.fillRect(badgeX, badgeY, badgeW, badgeH);
       ctx.strokeRect(badgeX, badgeY, badgeW, badgeH);
 
@@ -622,21 +619,19 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
       ctx.moveTo(selectedNode.x - 5, badgeY + badgeH);
       ctx.lineTo(selectedNode.x + 5, badgeY + badgeH);
       ctx.lineTo(selectedNode.x, badgeY + badgeH + 6);
-      ctx.fillStyle = isMaximalist ? '#FFE600' : (isLightMode ? 'rgba(255, 255, 255, 0.98)' : 'rgba(0, 0, 0, 0.95)');
+      ctx.fillStyle = isLightMode ? '#FFE600' : '#0A0A0A';
       ctx.fill();
-      if (isMaximalist) {
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-      }
+      ctx.strokeStyle = isLightMode ? '#000000' : '#00FF66';
+      ctx.lineWidth = 2;
+      ctx.stroke();
 
       // Badge texts in high-contrast
-      ctx.fillStyle = isMaximalist ? '#000000' : (isLightMode ? '#0F172A' : '#FFFFFF');
+      ctx.fillStyle = isLightMode ? '#000000' : '#00FF66';
       ctx.font = 'bold 11px "JetBrains Mono", monospace';
       ctx.fillText(nameText, badgeX + 10, badgeY + 14);
 
-      ctx.fillStyle = isMaximalist ? '#B91C1C' : (isInduced ? COLOR_INDUCED : (isLightMode ? '#475569' : '#E2E8F0'));
-      ctx.font = isMaximalist ? 'bold 10px "Inter", sans-serif' : '10px "Inter", sans-serif';
+      ctx.fillStyle = isLightMode ? '#B91C1C' : '#FF007F';
+      ctx.font = 'bold 10px "Inter", sans-serif';
       ctx.fillText(subText, badgeX + 10, badgeY + 27);
     }
 

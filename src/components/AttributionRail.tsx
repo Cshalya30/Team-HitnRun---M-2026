@@ -25,7 +25,6 @@ export const AttributionRail: React.FC<AttributionRailProps> = ({
   ward,
   jlg,
   snapshot,
-  transientMetric,
   isLoading = false,
   error = null,
   onSelectBorrowerId,
@@ -36,17 +35,19 @@ export const AttributionRail: React.FC<AttributionRailProps> = ({
   if (isLoading) {
     return (
       <div className="surface-panel" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-16)' }}>
-        <div className="skeleton-box" style={{ width: '45%', height: '24px' }} />
-        <div className="skeleton-box" style={{ width: '80%', height: '48px' }} />
-        <div className="skeleton-box" style={{ width: '100%', height: '120px' }} />
+        <div style={{ width: '45%', height: '24px', backgroundColor: 'var(--surface-2)' }} />
+        <div style={{ width: '80%', height: '48px', backgroundColor: 'var(--surface-2)' }} />
+        <div style={{ width: '100%', height: '120px', backgroundColor: 'var(--surface-2)' }} />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="surface-panel" style={{ border: '1px solid var(--induced)' }}>
-        <h3 style={{ color: 'var(--induced)', marginBottom: '8px' }}>Attribution Analysis Unavailable</h3>
+      <div className="surface-panel" style={{ border: '2.5px solid var(--induced)' }}>
+        <h3 style={{ color: 'var(--induced)', marginBottom: '8px', fontFamily: 'var(--font-display)', fontWeight: 800 }}>
+          Attribution Analysis Unavailable
+        </h3>
         <p style={{ fontSize: '12px', color: 'var(--ink-1)' }}>{error}</p>
       </div>
     );
@@ -63,13 +64,15 @@ export const AttributionRail: React.FC<AttributionRailProps> = ({
           justifyContent: 'center',
           minHeight: '440px',
           textAlign: 'center',
-          gap: '12px',
+          gap: '14px',
         }}
       >
-        <div style={{ color: 'var(--ink-2)', fontSize: '20px' }}>⊙</div>
-        <h3 style={{ fontSize: '15px', color: 'var(--ink-0)' }}>Select Borrower</h3>
-        <p style={{ fontSize: '12px', color: 'var(--ink-1)', maxWidth: '240px', lineHeight: 1.5 }}>
-          Click any node on the contagion network map to inspect her three-way causal attribution.
+        <span className="synth-jack" style={{ width: '28px', height: '28px' }} />
+        <h3 style={{ fontSize: '16px', fontFamily: 'var(--font-display)', fontWeight: 800, color: 'var(--ink-0)', textTransform: 'uppercase' }}>
+          Select Borrower
+        </h3>
+        <p style={{ fontSize: '12px', color: 'var(--ink-1)', maxWidth: '240px', lineHeight: 1.5, fontFamily: 'var(--font-mono)' }}>
+          Click any node on the network map to inspect her 3-way causal attribution and patch vectors.
         </p>
       </div>
     );
@@ -88,7 +91,7 @@ export const AttributionRail: React.FC<AttributionRailProps> = ({
       style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: 'var(--space-20)',
+        gap: 'var(--space-16)',
         width: '100%',
       }}
       role="region"
@@ -96,19 +99,19 @@ export const AttributionRail: React.FC<AttributionRailProps> = ({
     >
       {/* Borrower Header & Spatial Breadcrumb */}
       <div>
-        <div style={{ fontSize: '11px', color: 'var(--ink-2)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '4px' }}>
-          {ward?.name.split('·')[1]?.trim()} · {centre?.name.split('Centre')[0].trim()} · {jlg?.name.split('(')[0].trim()}
+        <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', fontWeight: 800, color: 'var(--ink-2)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>
+          {ward?.name.split('·')[1]?.trim()} /// {centre?.name.split('Centre')[0].trim()} /// {jlg?.name.split('(')[0].trim()}
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-          <h2 style={{ fontSize: '20px', color: 'var(--ink-0)', letterSpacing: '-0.02em' }}>
+          <h2 style={{ fontSize: '22px', fontFamily: 'var(--font-display)', fontWeight: 900, color: 'var(--ink-0)', letterSpacing: '-0.02em', textTransform: 'uppercase' }}>
             {borrower.displayName}
           </h2>
-          <span className="mono-num" style={{ fontSize: '11px', color: 'var(--ink-2)' }}>
+          <span className="brutal-stamp" style={{ backgroundColor: 'var(--surface-0)', color: 'var(--ink-0)' }}>
             {borrower.id.toUpperCase()}
           </span>
         </div>
-        <div style={{ fontSize: '12px', color: 'var(--ink-1)', marginTop: '2px' }}>
-          {borrower.occupation} · Cycle {borrower.loanCycle} · Weekly EMI: ₹{borrower.emi.toLocaleString('en-IN')}
+        <div style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--ink-1)', marginTop: '4px' }}>
+          {borrower.occupation} · CYCLE {borrower.loanCycle} · WEEKLY EMI: ₹{borrower.emi.toLocaleString('en-IN')}
         </div>
       </div>
 
@@ -118,26 +121,26 @@ export const AttributionRail: React.FC<AttributionRailProps> = ({
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'baseline',
-          borderBottom: '1px solid var(--hairline)',
-          paddingBottom: 'var(--space-16)',
+          borderBottom: '2px solid var(--hairline)',
+          paddingBottom: 'var(--space-12)',
         }}
       >
         <div>
-          <div style={{ fontSize: '11px', color: 'var(--ink-2)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          <div style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', fontWeight: 800, color: 'var(--ink-2)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
             Current Latent Stress
           </div>
           <div
             className="mono-num"
             style={{
-              fontSize: '32px',
-              fontWeight: 700,
+              fontSize: '34px',
+              fontWeight: 900,
               color:
                 snapshot.latentStress >= 0.45
                   ? 'var(--induced)'
                   : snapshot.latentStress >= 0.35
                   ? 'var(--idio)'
                   : 'var(--signal)',
-              letterSpacing: '-0.03em',
+              letterSpacing: '-0.04em',
               lineHeight: 1.1,
               marginTop: '4px',
             }}
@@ -148,113 +151,118 @@ export const AttributionRail: React.FC<AttributionRailProps> = ({
 
         <div style={{ textAlign: 'right' }}>
           <span
-            className="badge-pill"
+            className="brutal-stamp"
             style={{
-              borderColor: snapshot.isEscalated ? 'rgba(226, 85, 99, 0.4)' : 'var(--hairline)',
-              color: snapshot.isEscalated ? 'var(--induced)' : 'var(--ink-1)',
+              backgroundColor: snapshot.isEscalated ? 'var(--induced)' : 'var(--signal)',
+              color: snapshot.isEscalated ? '#FFFFFF' : '#000000',
             }}
           >
             {snapshot.isEscalated ? 'ESCALATED ALERT' : 'TRANSIENT NOISE FILTERED'}
           </span>
-          <div style={{ fontSize: '11px', color: 'var(--ink-2)', marginTop: '4px' }}>
-            Days Past Due: <strong className="mono-num" style={{ color: 'var(--ink-0)' }}>{snapshot.dpd}d</strong>
+          <div style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: 'var(--ink-2)', marginTop: '6px' }}>
+            DPD: <strong className="mono-num" style={{ color: 'var(--ink-0)' }}>{snapshot.dpd} DAYS</strong>
           </div>
         </div>
       </div>
 
-      {/* Three-Way Causal Split */}
+      {/* Three-Way Causal Split (Analog Audio Console VU Meter Style) */}
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-          <span style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--ink-1)' }}>
+          <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--ink-0)' }}>
             Causal Attribution Split
           </span>
-          <span className="mono-num" style={{ fontSize: '11px', color: 'var(--ink-2)' }}>
+          <span className="mono-num" style={{ fontSize: '10px', color: 'var(--ink-2)' }}>
             MC 200 ({cb.durationMs}ms)
           </span>
         </div>
 
-        {/* Refined Segmented Bar */}
-        <div
-          style={{
-            display: 'flex',
-            height: '6px',
-            borderRadius: '999px',
-            overflow: 'hidden',
-            backgroundColor: 'var(--surface-2)',
-            marginBottom: '12px',
-          }}
-        >
-          <div style={{ width: `${idioPct}%`, backgroundColor: 'var(--idio)' }} />
-          <div style={{ width: `${inducedPct}%`, backgroundColor: 'var(--induced)' }} />
-          <div style={{ width: `${covPct}%`, backgroundColor: 'var(--covariate)' }} />
+        {/* Segmented Analog VU Meter Bar */}
+        <div className="vu-meter-track" style={{ marginBottom: '12px' }}>
+          {Array.from({ length: 20 }).map((_, i) => {
+            const segPct = (i + 1) * 5;
+            let activeClass = '';
+            if (segPct <= idioPct) {
+              activeClass = 'active-yellow';
+            } else if (segPct <= idioPct + inducedPct) {
+              activeClass = 'active-red';
+            } else if (segPct <= 100) {
+              activeClass = 'active-green';
+            }
+            return <div key={i} className={`vu-segment ${activeClass}`} />;
+          })}
         </div>
 
         {/* Causal Breakdown Rows */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '11px', fontFamily: 'var(--font-mono)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: 'var(--ink-1)' }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--idio)' }} />
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: 'var(--ink-0)', fontWeight: 700 }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--idio)', display: 'inline-block' }} />
               Idiosyncratic (Her Own)
             </span>
             <div style={{ textAlign: 'right' }}>
-              <span className="mono-num" style={{ fontWeight: 600, color: 'var(--idio)' }}>{idioPct}%</span>
-              <span className="mono-num" style={{ fontSize: '11px', color: 'var(--ink-2)', marginLeft: '6px' }}>
+              <span className="mono-num" style={{ fontWeight: 800, color: 'var(--idio)' }}>{idioPct}%</span>
+              <span className="mono-num" style={{ fontSize: '10px', color: 'var(--ink-2)', marginLeft: '6px' }}>
                 [{Math.round(cb.idioCiLow * 100)}%-{Math.round(cb.idioCiHigh * 100)}%]
               </span>
             </div>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: 'var(--ink-1)' }}>
-              <span style={{ width: '6px', height: '6px', backgroundColor: 'var(--induced)', transform: 'rotate(45deg)', display: 'inline-block' }} />
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: 'var(--ink-0)', fontWeight: 700 }}>
+              <span style={{ width: '8px', height: '8px', backgroundColor: 'var(--induced)', transform: 'rotate(45deg)', display: 'inline-block' }} />
               Induced (Group Peer)
             </span>
             <div style={{ textAlign: 'right' }}>
-              <span className="mono-num" style={{ fontWeight: 600, color: 'var(--induced)' }}>{inducedPct}%</span>
-              <span className="mono-num" style={{ fontSize: '11px', color: 'var(--ink-2)', marginLeft: '6px' }}>
+              <span className="mono-num" style={{ fontWeight: 800, color: 'var(--induced)' }}>{inducedPct}%</span>
+              <span className="mono-num" style={{ fontSize: '10px', color: 'var(--ink-2)', marginLeft: '6px' }}>
                 [{Math.round(cb.inducedCiLow * 100)}%-{Math.round(cb.inducedCiHigh * 100)}%]
               </span>
             </div>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: 'var(--ink-1)' }}>
-              <span style={{ width: '6px', height: '6px', backgroundColor: 'var(--covariate)' }} />
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: 'var(--ink-0)', fontWeight: 700 }}>
+              <span style={{ width: '8px', height: '8px', backgroundColor: 'var(--covariate)', display: 'inline-block' }} />
               Covariate (Ward Macro)
             </span>
             <div style={{ textAlign: 'right' }}>
-              <span className="mono-num" style={{ fontWeight: 600, color: 'var(--covariate)' }}>{covPct}%</span>
-              <span className="mono-num" style={{ fontSize: '11px', color: 'var(--ink-2)', marginLeft: '6px' }}>
+              <span className="mono-num" style={{ fontWeight: 800, color: 'var(--covariate)' }}>{covPct}%</span>
+              <span className="mono-num" style={{ fontSize: '10px', color: 'var(--ink-2)', marginLeft: '6px' }}>
                 [{Math.round(cb.covariateCiLow * 100)}%-{Math.round(cb.covariateCiHigh * 100)}%]
               </span>
             </div>
           </div>
         </div>
 
-        {/* Upstream Origin Callout */}
+        {/* Upstream Origin Patch Connector */}
         {snapshot.sourceBorrowerName && (
           <div
             style={{
-              marginTop: '12px',
-              padding: '8px 12px',
-              borderLeft: '2px solid var(--induced)',
-              backgroundColor: 'rgba(226, 85, 99, 0.05)',
-              borderRadius: '0 6px 6px 0',
+              marginTop: '14px',
+              padding: '10px 12px',
+              border: '2px solid var(--induced)',
+              borderRadius: 'var(--radius-control)',
+              backgroundColor: 'var(--surface-0)',
+              boxShadow: '3px 3px 0px var(--induced)',
               fontSize: '11px',
+              fontFamily: 'var(--font-mono)',
             }}
           >
-            <div style={{ color: 'var(--ink-2)', textTransform: 'uppercase' }}>Contagion Transmission Origin</div>
-            <div style={{ color: 'var(--ink-0)', marginTop: '2px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--induced)', fontWeight: 800, textTransform: 'uppercase' }}>
+              <span className="synth-jack" />
+              <span>PATCH VECTOR: CONTAGION SOURCE</span>
+            </div>
+            <div style={{ color: 'var(--ink-0)', marginTop: '4px', fontWeight: 600 }}>
               Transmitted from <strong style={{ color: 'var(--induced)' }}>{snapshot.sourceBorrowerName}</strong> via{' '}
-              <span style={{ textTransform: 'uppercase', color: 'var(--ink-1)' }}>{snapshot.sourceChannel}</span> edge
+              <span style={{ textTransform: 'uppercase', color: 'var(--idio)' }}>{snapshot.sourceChannel}</span> channel
             </div>
             {onSelectBorrowerId && snapshot.sourceBorrowerId && (
               <button
                 onClick={() => onSelectBorrowerId(snapshot.sourceBorrowerId!)}
-                className="btn-control"
-                style={{ height: '22px', fontSize: '10px', marginTop: '6px', padding: '0 8px' }}
+                className="btn-secondary"
+                style={{ height: '24px', fontSize: '10px', marginTop: '8px', width: '100%' }}
               >
-                Inspect Origin Borrower
+                ➔ INSPECT ORIGIN ({snapshot.sourceBorrowerId.toUpperCase()})
               </button>
             )}
           </div>
@@ -264,15 +272,15 @@ export const AttributionRail: React.FC<AttributionRailProps> = ({
       {/* Signal Contributions */}
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-          <span style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--ink-1)' }}>
+          <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--ink-0)' }}>
             Primary Signal Drivers
           </span>
           <button
             onClick={() => setShowAllSignals(!showAllSignals)}
-            className="btn-control"
-            style={{ height: '20px', padding: '0 6px', fontSize: '10px', background: 'none', border: 'none', color: 'var(--ink-2)' }}
+            className="btn-ghost"
+            style={{ height: '20px', padding: '0 6px', fontSize: '10px', color: 'var(--ink-2)', fontFamily: 'var(--font-mono)', fontWeight: 700 }}
           >
-            {showAllSignals ? 'Show Top 4' : 'Show All 8'}
+            {showAllSignals ? '[-] TOP 4' : '[+] ALL 8'}
           </button>
         </div>
 
@@ -294,16 +302,17 @@ export const AttributionRail: React.FC<AttributionRailProps> = ({
 
               const pct = Math.round(contribution * 1000) / 10;
               return (
-                <div key={signalName} style={{ display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '11px' }}>
+                <div key={signalName} style={{ display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '11px', fontFamily: 'var(--font-mono)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--ink-1)' }}>
                     <span>{labelMap[signalName] || signalName}</span>
-                    <span className="mono-num" style={{ color: 'var(--ink-0)' }}>+{pct}%</span>
+                    <span className="mono-num" style={{ color: 'var(--ink-0)', fontWeight: 700 }}>+{pct}%</span>
                   </div>
                   <div
                     style={{
-                      height: '3px',
-                      backgroundColor: 'var(--surface-2)',
-                      borderRadius: '999px',
+                      height: '6px',
+                      backgroundColor: 'var(--surface-0)',
+                      border: '1px solid var(--hairline)',
+                      borderRadius: '2px',
                       overflow: 'hidden',
                     }}
                   >
@@ -311,7 +320,7 @@ export const AttributionRail: React.FC<AttributionRailProps> = ({
                       style={{
                         height: '100%',
                         width: `${Math.min(100, pct * 4)}%`,
-                        backgroundColor: signalName === 'crossPayment' ? 'var(--induced)' : 'var(--ink-1)',
+                        backgroundColor: signalName === 'crossPayment' ? 'var(--induced)' : 'var(--idio)',
                       }}
                     />
                   </div>
@@ -323,20 +332,19 @@ export const AttributionRail: React.FC<AttributionRailProps> = ({
 
       {/* Intervention Trigger */}
       {onOpenInterventionModal && (
-        <div style={{ borderTop: '1px solid var(--hairline)', paddingTop: 'var(--space-12)' }}>
+        <div style={{ borderTop: '2px solid var(--hairline)', paddingTop: 'var(--space-12)' }}>
           <button
-            className="btn-control"
+            className="btn-primary"
             onClick={onOpenInterventionModal}
             style={{
               width: '100%',
-              height: '34px',
-              backgroundColor: 'rgba(255, 255, 255, 0.08)',
-              border: '1px solid rgba(255, 255, 255, 0.12)',
-              color: '#fff',
-              fontWeight: 500,
+              height: '42px',
+              fontSize: '12px',
+              fontFamily: 'var(--font-mono)',
+              fontWeight: 800,
             }}
           >
-            Simulate Intervention Trajectory
+            ⚡ SIMULATE INTERVENTION TRAJECTORY
           </button>
         </div>
       )}
