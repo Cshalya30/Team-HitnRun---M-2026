@@ -30,6 +30,10 @@ export const App: React.FC = () => {
 
   const [networkFirstVisit, setNetworkFirstVisit] = useState(true);
 
+  useEffect(() => {
+    document.documentElement.removeAttribute('data-theme');
+  }, []);
+
   // Portfolio generation
   const portfolio = useMemo(() => {
     return generateSyntheticPortfolio(urlState.seed);

@@ -878,57 +878,6 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
         }}
       />
 
-      {/* Top left legend and reset view control */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 'var(--space-12)',
-          left: 'var(--space-12)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 'var(--space-12)',
-          backgroundColor: 'rgba(8, 10, 15, 0.92)',
-          padding: '6px 12px',
-          borderRadius: 'var(--radius-control)',
-          border: '1px solid var(--hairline)',
-          fontSize: '11px',
-          zIndex: 'var(--z-panel)' as unknown as number,
-          userSelect: 'none',
-        }}
-      >
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: 'var(--ink-0)', fontWeight: 500 }}>
-          <span style={{ color: COLOR_IDIO, fontSize: '10px' }}>●</span> Idiosyncratic
-        </span>
-        <span style={{ color: 'var(--hairline)' }}>·</span>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: 'var(--ink-0)', fontWeight: 500 }}>
-          <span style={{ color: COLOR_INDUCED, fontSize: '10px' }}>▲</span> Induced
-        </span>
-        <span style={{ color: 'var(--hairline)' }}>·</span>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: 'var(--ink-0)', fontWeight: 500 }}>
-          <span style={{ color: COLOR_COVARIATE, fontSize: '10px' }}>■</span> Covariate
-        </span>
-
-        <button
-          className="btn-ghost"
-          onClick={fitToViewport}
-          style={{
-            marginLeft: 'var(--space-4)',
-            height: '22px',
-            padding: '0 8px',
-            fontSize: '11px',
-            fontFamily: 'var(--font-mono)',
-            fontWeight: 600,
-            color: 'var(--ink-0)',
-            border: '1px solid var(--hairline)',
-            borderRadius: 'var(--radius-control)',
-            cursor: 'pointer',
-          }}
-          title="Reset canvas viewport to fit all nodes"
-        >
-          Reset View
-        </button>
-      </div>
-
       {/* Hover tooltip */}
       {hoveredNode && (
         <div

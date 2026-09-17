@@ -66,26 +66,6 @@
   --motion-node: 400ms ease-out;
 }
 
-[data-theme="light"] {
-  --surface-0: #F7F7FA;
-  --surface-1: #FFFFFF;
-  --surface-2: #EEEFF4;
-  --surface-3: #E4E5EC;
-  --hairline: #DDDFE7;
-
-  --ink-0: #14161C;
-  --ink-1: #4A4F5C;
-  --ink-2: #7B8194;
-
-  --idio: #9A6B14;
-  --induced: #B0243A;
-  --covariate: #1E6E96;
-  --signal: #147A52;
-  --warn: #9A6B14;
-  --danger: #B0243A;
-  --focus: var(--ink-0);
-}
-
 @media (prefers-reduced-motion: reduce) {
   :root {
     --motion-hover: 0ms;
