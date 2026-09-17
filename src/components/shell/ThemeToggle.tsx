@@ -1,35 +1,64 @@
 import React, { useState, useEffect } from 'react';
 
+export type AppTheme = 'maximalist' | 'dark' | 'light';
+
 export const ThemeToggle: React.FC = () => {
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+  const [theme, setTheme] = useState<AppTheme>(() => {
     if (typeof document !== 'undefined') {
-      return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+      const current = document.documentElement.getAttribute('data-theme') as AppTheme;
+      if (current === 'light' || current === 'dark' || current === 'maximalist') {
+        return current;
+      }
     }
-    return 'dark';
+    return 'maximalist';
   });
 
   useEffect(() => {
-    if (theme === 'light') {
-      document.documentElement.setAttribute('data-theme', 'light');
-    } else {
+    if (theme === 'dark') {
       document.documentElement.removeAttribute('data-theme');
-    }
-  }, [theme]);
-
-  const toggle = () => {
-    const next = theme === 'dark' ? 'light' : 'dark';
-    setTheme(next);
-    if (next === 'light') {
-      document.documentElement.setAttribute('data-theme', 'light');
     } else {
-      document.documentElement.removeAttribute('data-theme');
+      document.documentElement.setAttribute('data-theme', theme);
     }
     window.dispatchEvent(new Event('themechange'));
+  }, [theme]);
+
+  const cycleTheme = () => {
+    const sequence: AppTheme[] = ['maximalist', 'dark', 'light'];
+    const nextIdx = (sequence.indexOf(theme) + 1) % sequence.length;
+    const next = sequence[nextIdx];
+    setTheme(next);
+  };
+
+  const getLabel = () => {
+    switch (theme) {
+      case 'maximalist':
+        return '⚡ MAXIMALIST';
+      case 'dark':
+        return '🌙 DARK (PITCH)';
+      case 'light':
+        return '☀️ LIGHT MINIMAL';
+    }
+  };
+
+  const getStyle = () => {
+    if (theme === 'maximalist') {
+      return {
+        backgroundColor: '#FFE600',
+        color: '#000000',
+        border: '2.5px solid #000000',
+        boxShadow: '3px 3px 0px #000000',
+      };
+    }
+    return {
+      backgroundColor: 'var(--surface-2)',
+      color: 'var(--ink-0)',
+      border: '1px solid var(--hairline)',
+    };
   };
 
   return (
     <button
-      onClick={toggle}
+      onClick={cycleTheme}
       className="btn-ghost"
       style={{
         display: 'inline-flex',
@@ -37,19 +66,18 @@ export const ThemeToggle: React.FC = () => {
         gap: '6px',
         fontSize: '11px',
         fontFamily: 'var(--font-mono)',
-        fontWeight: 600,
+        fontWeight: 700,
         height: '28px',
-        padding: '0 10px',
-        border: '1px solid var(--hairline)',
+        padding: '0 12px',
         borderRadius: 'var(--radius-control)',
-        backgroundColor: 'var(--surface-2)',
-        color: 'var(--ink-0)',
         cursor: 'pointer',
+        transition: 'all 120ms cubic-bezier(.2,0,.4,1)',
+        ...getStyle(),
       }}
-      title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-      aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+      title={`Current Theme: ${theme.toUpperCase()}. Click to cycle mode.`}
+      aria-label={`Current Theme: ${theme.toUpperCase()}. Click to cycle mode.`}
     >
-      <span>{theme === 'dark' ? 'LIGHT MODE' : 'DARK MODE'}</span>
+      <span>{getLabel()}</span>
     </button>
   );
 };

@@ -86,6 +86,158 @@
   --focus: var(--ink-0);
 }
 
+[data-theme="maximalist"] {
+  --surface-0: #FFFDF0; /* warm pop creamy canvas */
+  --surface-1: #FFFFFF; /* crisp paper white card surface */
+  --surface-2: #FFE600; /* vibrant canary yellow */
+  --surface-3: #FF2A85; /* electric magenta pop */
+  --hairline: #000000;  /* bold solid black border */
+
+  --ink-0: #000000;     /* maximum impact black */
+  --ink-1: #1E293B;     /* dark slate */
+  --ink-2: #475569;     /* medium slate */
+
+  --idio: #FFE600;      /* canary yellow */
+  --induced: #FF2A3B;   /* flaming punch red */
+  --covariate: #0038FF; /* electric cobalt blue */
+  --signal: #00D06C;    /* emerald pop green */
+  --warn: #FFE600;      /* canary yellow */
+  --danger: #FF2A3B;    /* punch red */
+  --focus: #000000;
+
+  --shadow-brutal: 4px 4px 0px #000000;
+  --shadow-brutal-sm: 2px 2px 0px #000000;
+  --shadow-brutal-lg: 6px 6px 0px #000000;
+  --radius-control: 4px;
+  --radius-panel: 6px;
+}
+
+/* Neo-Brutalist & Pop-Maximalist component overrides */
+[data-theme="maximalist"] .surface-panel {
+  border: 2.5px solid #000000 !important;
+  box-shadow: 4px 4px 0px #000000 !important;
+  background-color: #FFFFFF !important;
+}
+
+[data-theme="maximalist"] .btn-primary {
+  background-color: #FFE600 !important;
+  color: #000000 !important;
+  border: 2.5px solid #000000 !important;
+  box-shadow: 3px 3px 0px #000000 !important;
+  font-weight: 700 !important;
+}
+
+[data-theme="maximalist"] .btn-secondary {
+  background-color: #FFFFFF !important;
+  color: #000000 !important;
+  border: 2.5px solid #000000 !important;
+  box-shadow: 3px 3px 0px #000000 !important;
+  font-weight: 700 !important;
+}
+
+[data-theme="maximalist"] .btn-ghost {
+  border: 2px solid #000000 !important;
+  box-shadow: 2px 2px 0px #000000 !important;
+  background-color: #FFFFFF !important;
+  color: #000000 !important;
+  font-weight: 700 !important;
+}
+
+[data-theme="maximalist"] .btn-primary:hover,
+[data-theme="maximalist"] .btn-secondary:hover,
+[data-theme="maximalist"] .btn-ghost:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0px #000000 !important;
+}
+
+[data-theme="maximalist"] .btn-primary:active,
+[data-theme="maximalist"] .btn-secondary:active,
+[data-theme="maximalist"] .btn-ghost:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0px #000000 !important;
+}
+
+[data-theme="maximalist"] header.boot-topbar {
+  border-bottom: 2.5px solid #000000 !important;
+  background-color: #FFE600 !important;
+}
+
+[data-theme="maximalist"] table.tremor-table,
+[data-theme="maximalist"] table.dense-table {
+  border: 2px solid #000000 !important;
+}
+
+[data-theme="maximalist"] table.tremor-table th,
+[data-theme="maximalist"] table.dense-table th {
+  background-color: #FFE600 !important;
+  color: #000000 !important;
+  border-bottom: 2.5px solid #000000 !important;
+  font-weight: 800 !important;
+}
+
+[data-theme="maximalist"] table.tremor-table tbody tr:hover,
+[data-theme="maximalist"] table.dense-table tbody tr:hover {
+  background-color: #FFF388 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 0px #000000 !important;
+}
+
+[data-theme="maximalist"] .boot-scrubber > div,
+[data-theme="maximalist"] div[aria-label="Simulation Scrubber and Timeline"] {
+  border-bottom: 2.5px solid #000000 !important;
+  background-color: #FFFFFF !important;
+}
+
+[data-theme="maximalist"] .scenario-chip {
+  border: 2px solid #000000 !important;
+  background-color: #FFFFFF !important;
+  color: #000000 !important;
+  border-radius: 4px !important;
+  font-weight: 700 !important;
+  box-shadow: 2px 2px 0px #000000 !important;
+  transition: all 100ms ease !important;
+}
+
+[data-theme="maximalist"] .scenario-chip:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0px #000000 !important;
+  background-color: #FFF388 !important;
+}
+
+[data-theme="maximalist"] .scenario-chip:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0px #000000 !important;
+}
+
+[data-theme="maximalist"] .status-badge {
+  border: 2px solid #000000 !important;
+  box-shadow: 2px 2px 0px #000000 !important;
+  font-weight: 800 !important;
+  border-radius: 4px !important;
+}
+
+[data-theme="maximalist"] div[aria-label^="Diagnostic Dossier"] {
+  border: 2.5px solid #000000 !important;
+  box-shadow: 4px 4px 0px #000000 !important;
+  background-color: #FFFFFF !important;
+}
+
+[data-theme="maximalist"] div[aria-label="Simulation Scenario Injections"] {
+  border: 2.5px solid #000000 !important;
+  box-shadow: 4px 4px 0px #000000 !important;
+  background-color: #FFFFFF !important;
+}
+
+[data-theme="maximalist"] div[role="dialog"] > div {
+  border: 3.5px solid #000000 !important;
+  box-shadow: 8px 8px 0px #000000 !important;
+  background-color: #FFFFFF !important;
+}
+
+[data-theme="maximalist"] .maximalist-ticker {
+  display: block !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   :root {
     --motion-hover: 0ms;

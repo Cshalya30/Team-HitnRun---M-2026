@@ -358,10 +358,12 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, width, height);
 
-    const isLightMode = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light';
+    const currentTheme = (typeof document !== 'undefined' ? document.documentElement.getAttribute('data-theme') : null) || 'dark';
+    const isMaximalist = currentTheme === 'maximalist';
+    const isLightMode = currentTheme === 'light';
 
-    // Canvas Background: Actual Pitch Black (#000000) or Clean White (#FFFFFF)
-    ctx.fillStyle = isLightMode ? '#FFFFFF' : '#000000';
+    // Canvas Background: Maximalist warm cream (#FFFDF0), Light white (#FFFFFF), or Dark pitch black (#000000)
+    ctx.fillStyle = isMaximalist ? '#FFFDF0' : (isLightMode ? '#FFFFFF' : '#000000');
     ctx.fillRect(0, 0, width, height);
 
     ctx.translate(transform.x, transform.y);
@@ -412,9 +414,10 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
     // 1. Batched Edges Rendering (Draws 10,000+ links in exactly 2 GPU draw calls)
     if (edgeBaseOpacity > 0 || selectedBorrowerId) {
       const normalOpacity = selectedBorrowerId ? 0.03 : edgeBaseOpacity;
-      const edgeRgb = isLightMode ? '0, 0, 0' : '255, 255, 255';
-      ctx.strokeStyle = `rgba(${edgeRgb}, ${normalOpacity.toFixed(3)})`;
-      ctx.lineWidth = selectedBorrowerId ? 0.5 : 0.8;
+      const edgeRgb = (isMaximalist || isLightMode) ? '0, 0, 0' : '255, 255, 255';
+      const edgeAlpha = isMaximalist ? (selectedBorrowerId ? 0.04 : 0.16) : normalOpacity;
+      ctx.strokeStyle = `rgba(${edgeRgb}, ${edgeAlpha.toFixed(3)})`;
+      ctx.lineWidth = selectedBorrowerId ? 0.5 : (isMaximalist ? 1.0 : 0.8);
       ctx.beginPath();
 
       const highlightedEdges: ForceEdge[] = [];
@@ -439,10 +442,10 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
       }
       ctx.stroke();
 
-      // Highlighted attribution evidence edges (high contrast white in dark, dark slate in light)
+      // Highlighted attribution evidence edges (Cobalt Blue in maximalist, dark slate in light, white in dark)
       if (highlightedEdges.length > 0) {
-        ctx.strokeStyle = isLightMode ? '#0F172A' : '#FFFFFF';
-        ctx.lineWidth = 2.4;
+        ctx.strokeStyle = isMaximalist ? '#0038FF' : (isLightMode ? '#0F172A' : '#FFFFFF');
+        ctx.lineWidth = isMaximalist ? 3.0 : 2.4;
         ctx.beginPath();
         for (let i = 0; i < highlightedEdges.length; i++) {
           const e = highlightedEdges[i];
@@ -510,8 +513,8 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
       ctx.fill();
       ctx.globalAlpha = 1.0;
 
-      ctx.strokeStyle = COLOR_HAIRLINE;
-      ctx.lineWidth = 0.75;
+      ctx.strokeStyle = isMaximalist ? '#000000' : (isLightMode ? '#CBD5E1' : COLOR_HAIRLINE);
+      ctx.lineWidth = isMaximalist ? 1.4 : 0.75;
       ctx.stroke();
     }
 
@@ -523,8 +526,8 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
       // Origin Dashed Halo
       ctx.beginPath();
       ctx.arc(originNode.x, originNode.y, r + 5, 0, Math.PI * 2);
-      ctx.strokeStyle = COLOR_INDUCED;
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = isMaximalist ? '#FF007A' : COLOR_INDUCED;
+      ctx.lineWidth = isMaximalist ? 2.5 : 1.5;
       ctx.setLineDash([3, 3]);
       ctx.stroke();
       ctx.setLineDash([]);
@@ -533,8 +536,8 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
       ctx.arc(originNode.x, originNode.y, r, 0, Math.PI * 2);
       ctx.fillStyle = COLOR_INDUCED;
       ctx.fill();
-      ctx.strokeStyle = '#FFFFFF';
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = isMaximalist ? '#000000' : '#FFFFFF';
+      ctx.lineWidth = isMaximalist ? 2 : 1;
       ctx.stroke();
 
       // Floating Origin Callout Pill
@@ -546,13 +549,17 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
       const boxX = originNode.x - boxW / 2;
       const boxY = originNode.y - r - boxH - 6;
 
-      ctx.fillStyle = isLightMode ? 'rgba(255, 255, 255, 0.98)' : 'rgba(0, 0, 0, 0.9)';
-      ctx.strokeStyle = COLOR_INDUCED;
-      ctx.lineWidth = 1;
+      if (isMaximalist) {
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(boxX + 3, boxY + 3, boxW, boxH);
+      }
+      ctx.fillStyle = isMaximalist ? '#FF2A3B' : (isLightMode ? 'rgba(255, 255, 255, 0.98)' : 'rgba(0, 0, 0, 0.9)');
+      ctx.strokeStyle = isMaximalist ? '#000000' : COLOR_INDUCED;
+      ctx.lineWidth = isMaximalist ? 2 : 1;
       ctx.fillRect(boxX, boxY, boxW, boxH);
       ctx.strokeRect(boxX, boxY, boxW, boxH);
 
-      ctx.fillStyle = isLightMode ? '#0F172A' : '#FFFFFF';
+      ctx.fillStyle = isMaximalist ? '#FFFFFF' : (isLightMode ? '#0F172A' : '#FFFFFF');
       ctx.fillText(label, boxX + 7, boxY + 14);
     }
 
@@ -562,18 +569,18 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
       const isInduced = snap?.dominantStressType === 'induced';
       const r = Math.max(7, Math.min(12, 6 + (snap?.latentStress ?? 0.5) * 6));
 
-      // Outer focus glow ring (bright white in dark, dark slate in light)
+      // Outer focus glow ring
       ctx.beginPath();
       ctx.arc(selectedNode.x, selectedNode.y, r + 5, 0, Math.PI * 2);
-      ctx.strokeStyle = isLightMode ? '#0F172A' : '#FFFFFF';
-      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = isMaximalist ? '#0038FF' : (isLightMode ? '#0F172A' : '#FFFFFF');
+      ctx.lineWidth = isMaximalist ? 3.0 : 2.5;
       ctx.stroke();
 
       // Second soft ring
       ctx.beginPath();
       ctx.arc(selectedNode.x, selectedNode.y, r + 9, 0, Math.PI * 2);
-      ctx.strokeStyle = isLightMode ? 'rgba(15, 23, 42, 0.35)' : 'rgba(255, 255, 255, 0.45)';
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = isMaximalist ? '#FF007A' : (isLightMode ? 'rgba(15, 23, 42, 0.35)' : 'rgba(255, 255, 255, 0.45)');
+      ctx.lineWidth = 1.8;
       ctx.stroke();
 
       // Node Body
@@ -581,11 +588,11 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
       ctx.arc(selectedNode.x, selectedNode.y, r, 0, Math.PI * 2);
       ctx.fillStyle = isInduced ? COLOR_INDUCED : COLOR_IDIO;
       ctx.fill();
-      ctx.strokeStyle = isLightMode ? '#0F172A' : '#FFFFFF';
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = isMaximalist ? '#000000' : (isLightMode ? '#0F172A' : '#FFFFFF');
+      ctx.lineWidth = isMaximalist ? 2.0 : 1.5;
       ctx.stroke();
 
-      // Prominent Floating Nameplate Badge
+      // Prominent Floating Nameplate Badge (Pop sticker with offset black drop shadow in maximalist)
       const nameText = `${selectedNode.borrower.displayName} (${selectedNode.id.toUpperCase()})`;
       const subText = snap
         ? `Stress: ${(snap.latentStress * 100).toFixed(0)}% · ${(snap.shareInduced * 100).toFixed(0)}% Induced (from ${snap.sourceBorrowerName || 'Peer'})`
@@ -600,9 +607,13 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
       const badgeX = selectedNode.x - badgeW / 2;
       const badgeY = selectedNode.y - r - badgeH - 12;
 
-      ctx.fillStyle = isLightMode ? 'rgba(255, 255, 255, 0.98)' : 'rgba(0, 0, 0, 0.95)';
-      ctx.strokeStyle = isLightMode ? '#0F172A' : '#FFFFFF';
-      ctx.lineWidth = 1.5;
+      if (isMaximalist) {
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(badgeX + 4, badgeY + 4, badgeW, badgeH);
+      }
+      ctx.fillStyle = isMaximalist ? '#FFE600' : (isLightMode ? 'rgba(255, 255, 255, 0.98)' : 'rgba(0, 0, 0, 0.95)');
+      ctx.strokeStyle = isMaximalist ? '#000000' : (isLightMode ? '#0F172A' : '#FFFFFF');
+      ctx.lineWidth = isMaximalist ? 2.5 : 1.5;
       ctx.fillRect(badgeX, badgeY, badgeW, badgeH);
       ctx.strokeRect(badgeX, badgeY, badgeW, badgeH);
 
@@ -611,16 +622,21 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
       ctx.moveTo(selectedNode.x - 5, badgeY + badgeH);
       ctx.lineTo(selectedNode.x + 5, badgeY + badgeH);
       ctx.lineTo(selectedNode.x, badgeY + badgeH + 6);
-      ctx.fillStyle = isLightMode ? 'rgba(255, 255, 255, 0.98)' : 'rgba(0, 0, 0, 0.95)';
+      ctx.fillStyle = isMaximalist ? '#FFE600' : (isLightMode ? 'rgba(255, 255, 255, 0.98)' : 'rgba(0, 0, 0, 0.95)');
       ctx.fill();
+      if (isMaximalist) {
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
 
       // Badge texts in high-contrast
-      ctx.fillStyle = isLightMode ? '#0F172A' : '#FFFFFF';
+      ctx.fillStyle = isMaximalist ? '#000000' : (isLightMode ? '#0F172A' : '#FFFFFF');
       ctx.font = 'bold 11px "JetBrains Mono", monospace';
       ctx.fillText(nameText, badgeX + 10, badgeY + 14);
 
-      ctx.fillStyle = isInduced ? COLOR_INDUCED : (isLightMode ? '#475569' : '#E2E8F0');
-      ctx.font = '10px "Inter", sans-serif';
+      ctx.fillStyle = isMaximalist ? '#B91C1C' : (isInduced ? COLOR_INDUCED : (isLightMode ? '#475569' : '#E2E8F0'));
+      ctx.font = isMaximalist ? 'bold 10px "Inter", sans-serif' : '10px "Inter", sans-serif';
       ctx.fillText(subText, badgeX + 10, badgeY + 27);
     }
 

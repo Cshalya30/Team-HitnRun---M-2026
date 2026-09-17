@@ -35,6 +35,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   onClearIntervention,
 }) => {
   return (
+    <>
     <header
       className="boot-topbar"
       style={{
@@ -176,5 +177,28 @@ export const TopBar: React.FC<TopBarProps> = ({
         />
       </div>
     </header>
+    <div
+      className="maximalist-ticker"
+      style={{
+        display: 'none',
+        backgroundColor: '#FFE600',
+        color: '#000000',
+        borderBottom: '2px solid #000000',
+        padding: '3px 16px',
+        fontFamily: 'var(--font-mono)',
+        fontSize: '10px',
+        fontWeight: 800,
+        letterSpacing: '0.08em',
+        overflow: 'hidden',
+        whiteSpace: 'nowrap',
+        textTransform: 'uppercase',
+        userSelect: 'none',
+      }}
+    >
+      <span>
+        ⚡ TREMOR RISK CONTAGION ENGINE ⚡ 5,245 ACTIVE BORROWERS · 30 WARDS · 177 CENTRES · 78 WEEKS SIMULATION ⚡ REAL-TIME LATENT STRESS ⚡ COUNTERFACTUAL ABLATION ATTRIBUTION ⚡
+      </span>
+    </div>
+    </>
   );
 };
