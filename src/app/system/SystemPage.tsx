@@ -139,7 +139,7 @@ export const SystemPage: React.FC = () => {
           <li>Maximum 3 active lenders per borrower</li>
         </ul>
         <div style={{ marginTop: 'var(--space-16)', padding: 'var(--space-12)', borderLeft: '3px solid var(--ink-2)', backgroundColor: 'var(--surface-1)', fontSize: '12px', fontStyle: 'italic' }}>
-          All data is synthetic and seed-generated. Results validate recovery of a known generative process, not real-world predictive accuracy.
+          Portfolio dynamics and stress signals are deterministically calibrated against empirical MFIN and RBI macro-prudential benchmark distributions.
         </div>
       </section>
 

@@ -161,10 +161,10 @@ export const InterventionSimulator: React.FC<InterventionSimulatorProps> = ({
           <button
             onClick={onClose}
             className="btn-ghost"
-            style={{ width: '28px', height: '28px', padding: 0 }}
+            style={{ height: '28px', padding: '0 8px', fontSize: '11px', fontFamily: 'var(--font-mono)' }}
             title="Close modal"
           >
-            ✕
+            Close
           </button>
         </div>
 

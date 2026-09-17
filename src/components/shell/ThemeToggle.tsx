@@ -50,7 +50,7 @@ export const ThemeToggle: React.FC = () => {
       title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`}
       aria-label={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`}
     >
-      <span>{theme === 'dark' ? '⚡ DARK' : '⚡ LIGHT'}</span>
+      <span>{theme === 'dark' ? 'DARK' : 'LIGHT'}</span>
     </button>
   );
 };

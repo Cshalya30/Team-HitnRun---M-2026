@@ -164,7 +164,7 @@ export const AccessibleBorrowerTable: React.FC<AccessibleBorrowerTableProps> = (
               color: filterEscalatedOnly ? 'var(--ink-0)' : 'var(--ink-1)',
             }}
           >
-            {filterEscalatedOnly ? '▲ Escalated Only' : 'Show All'}
+            {filterEscalatedOnly ? 'Escalated Only' : 'Show All'}
           </button>
         </div>
       </div>
@@ -177,9 +177,9 @@ export const AccessibleBorrowerTable: React.FC<AccessibleBorrowerTableProps> = (
               <th style={{ textAlign: 'left' }}>Borrower</th>
               <th style={{ textAlign: 'left' }}>Centre</th>
               <th style={{ textAlign: 'right' }}>Latent Stress</th>
-              <th style={{ textAlign: 'right' }}>Idio (●)</th>
-              <th style={{ textAlign: 'right' }}>Induced (▲)</th>
-              <th style={{ textAlign: 'right' }}>Covariate (■)</th>
+              <th style={{ textAlign: 'right' }}>Idio (%)</th>
+              <th style={{ textAlign: 'right' }}>Induced (%)</th>
+              <th style={{ textAlign: 'right' }}>Covariate (%)</th>
               <th style={{ textAlign: 'left' }}>Transmission Source</th>
               <th style={{ textAlign: 'center' }}>Status</th>
             </tr>
@@ -250,8 +250,8 @@ export const AccessibleBorrowerTable: React.FC<AccessibleBorrowerTableProps> = (
                     </td>
                     <td style={{ fontSize: '11px' }}>
                       {r.snapshot?.sourceBorrowerName ? (
-                        <span style={{ color: 'var(--induced)' }}>
-                          ▲ {r.snapshot.sourceBorrowerName}
+                        <span style={{ color: 'var(--induced)', fontWeight: 600 }}>
+                          {r.snapshot.sourceBorrowerName}
                         </span>
                       ) : (
                         <span style={{ color: 'var(--ink-2)' }}>-</span>

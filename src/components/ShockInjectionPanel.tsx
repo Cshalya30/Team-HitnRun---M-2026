@@ -52,7 +52,7 @@ export const ShockInjectionPanel: React.FC<ShockInjectionPanelProps> = ({
             className="btn-control"
             style={{ height: '22px', fontSize: '11px', padding: '0 8px', border: 'none', background: 'none', color: 'var(--ink-1)' }}
           >
-            Reset to Baseline ✕
+            Reset to Baseline
           </button>
         )}
       </div>

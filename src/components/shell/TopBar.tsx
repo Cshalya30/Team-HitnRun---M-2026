@@ -120,7 +120,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                 color: 'var(--signal)',
               }}
             >
-              <span>● ACTIVE: {activeIntervention.title.split('&')[0].trim().toUpperCase()}</span>
+              <span>ACTIVE: {activeIntervention.title.split('&')[0].trim().toUpperCase()}</span>
               {onClearIntervention && (
                 <button
                   onClick={onClearIntervention}
@@ -135,7 +135,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                   }}
                   title="Clear active intervention"
                 >
-                  ✕
+                  [x]
                 </button>
               )}
             </div>
@@ -216,10 +216,10 @@ export const TopBar: React.FC<TopBarProps> = ({
           }}
         >
           <span>
-            ⚡ TREMOR CONTAGION RISK ENGINE ⚡ 5,245 BORROWERS · 30 WARDS · 177 CENTRES · 78 WEEKS TIMELINE ⚡ REAL-TIME LATENT PROPAGATION ⚡ 3-CHANNEL COUNTERFACTUAL ABLATION ⚡ TRANSIENT FALSE-POSITIVE SUPPRESSION ⚡ RBI & MFIN CALIBRATED ⚡
+            TREMOR CONTAGION RISK ENGINE • 5,245 BORROWERS • 30 WARDS • 177 CENTRES • 78 WEEKS TIMELINE • REAL-TIME LATENT PROPAGATION • 3-CHANNEL COUNTERFACTUAL ABLATION • TRANSIENT FALSE-POSITIVE SUPPRESSION • RBI & MFIN CALIBRATED
           </span>
           <span style={{ marginLeft: '48px' }}>
-            ⚡ TREMOR CONTAGION RISK ENGINE ⚡ 5,245 BORROWERS · 30 WARDS · 177 CENTRES · 78 WEEKS TIMELINE ⚡ REAL-TIME LATENT PROPAGATION ⚡ 3-CHANNEL COUNTERFACTUAL ABLATION ⚡ TRANSIENT FALSE-POSITIVE SUPPRESSION ⚡ RBI & MFIN CALIBRATED ⚡
+            TREMOR CONTAGION RISK ENGINE • 5,245 BORROWERS • 30 WARDS • 177 CENTRES • 78 WEEKS TIMELINE • REAL-TIME LATENT PROPAGATION • 3-CHANNEL COUNTERFACTUAL ABLATION • TRANSIENT FALSE-POSITIVE SUPPRESSION • RBI & MFIN CALIBRATED
           </span>
         </div>
         <style>

@@ -158,7 +158,7 @@ export const ScenarioDrawer: React.FC<ScenarioDrawerProps> = ({
             style={{ height: '26px', fontSize: '11px', padding: '0 var(--space-8)' }}
             title="Reset active scenario shock"
           >
-            Reset ✕
+            Reset Filter
           </button>
         </div>
       )}

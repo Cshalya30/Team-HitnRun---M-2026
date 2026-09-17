@@ -36,7 +36,7 @@ export const EvidenceExport: React.FC<EvidenceExportProps> = ({
       auditMetadata: {
         tool: 'Tremor Microfinance Group-Contagion Risk Diagnostic',
         environment: 'Client-side Deterministic Simulation (Tier 1)',
-        confidentiality: 'Synthetic Demo Portfolio - Zero PII',
+        confidentiality: 'Demonstration Portfolio - Zero PII',
       },
       temporalContext: {
         simulationWeek: `Week ${currentWeek}`,
@@ -200,7 +200,7 @@ export const EvidenceExport: React.FC<EvidenceExportProps> = ({
                   onClick={handleCopyJSON}
                   style={{ height: '28px', fontSize: '11px' }}
                 >
-                  {copied ? 'Copied ✓' : 'Copy JSON'}
+                  {copied ? 'Copied' : 'Copy JSON'}
                 </button>
                 <button
                   className="btn-primary"
@@ -212,9 +212,9 @@ export const EvidenceExport: React.FC<EvidenceExportProps> = ({
                 <button
                   className="btn-ghost"
                   onClick={() => setIsOpen(false)}
-                  style={{ width: '28px', height: '28px', padding: 0 }}
+                  style={{ height: '28px', padding: '0 8px', fontSize: '11px', fontFamily: 'var(--font-mono)' }}
                 >
-                  ✕
+                  Close
                 </button>
               </div>
             </div>

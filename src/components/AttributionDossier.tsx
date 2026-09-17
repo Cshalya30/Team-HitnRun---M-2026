@@ -331,7 +331,7 @@ export const AttributionDossier: React.FC<AttributionDossierProps> = ({
               zIndex: 'var(--z-toast)' as any,
             }}
           >
-            {snapshot.isEscalated ? '▲ ESCALATED' : '○ NOISE SUPPRESSED'}
+            {snapshot.isEscalated ? 'ESCALATED' : 'NOISE SUPPRESSED'}
           </div>
           <div className="tabular-num" style={{ fontSize: '11px', color: 'var(--ink-1)' }}>
             Overdue: <strong style={{ color: 'var(--ink-0)' }}>{snapshot.dpd} DPD</strong>

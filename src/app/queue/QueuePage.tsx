@@ -139,7 +139,7 @@ export const QueuePage: React.FC<QueuePageProps> = ({
               color: 'var(--induced)',
             }}
           >
-            <span>● ESCALATED:</span>
+            <span>ESCALATED:</span>
             <span className="tabular-num" style={{ fontWeight: 900 }}>{escalatedCount}</span>
           </div>
 
@@ -152,7 +152,7 @@ export const QueuePage: React.FC<QueuePageProps> = ({
               color: 'var(--idio)',
             }}
           >
-            <span>● FLAGGED:</span>
+            <span>FLAGGED:</span>
             <span className="tabular-num" style={{ fontWeight: 900 }}>{flaggedCount}</span>
           </div>
 
@@ -165,7 +165,7 @@ export const QueuePage: React.FC<QueuePageProps> = ({
               color: 'var(--signal)',
             }}
           >
-            <span>● SUPPRESSED:</span>
+            <span>SUPPRESSED:</span>
             <span className="tabular-num" style={{ fontWeight: 900 }}>{flaggedCount - escalatedCount}</span>
           </div>
         </div>

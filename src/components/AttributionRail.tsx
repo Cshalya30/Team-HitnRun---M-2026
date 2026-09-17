@@ -262,7 +262,7 @@ export const AttributionRail: React.FC<AttributionRailProps> = ({
                 className="btn-secondary"
                 style={{ height: '24px', fontSize: '10px', marginTop: '8px', width: '100%' }}
               >
-                ➔ INSPECT ORIGIN ({snapshot.sourceBorrowerId.toUpperCase()})
+                INSPECT ORIGIN ({snapshot.sourceBorrowerId.toUpperCase()})
               </button>
             )}
           </div>
@@ -344,7 +344,7 @@ export const AttributionRail: React.FC<AttributionRailProps> = ({
               fontWeight: 800,
             }}
           >
-            ⚡ SIMULATE INTERVENTION TRAJECTORY
+            SIMULATE INTERVENTION TRAJECTORY
           </button>
         </div>
       )}

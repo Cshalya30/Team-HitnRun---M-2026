@@ -336,7 +336,7 @@ export const PortfolioPage: React.FC<PortfolioPageProps> = ({ portfolio, simulat
               fontWeight: 800,
             }}
           >
-            ⚡ APPLY REFINANCING FREEZE
+            APPLY REFINANCING FREEZE
           </button>
 
           <div
@@ -362,7 +362,7 @@ export const PortfolioPage: React.FC<PortfolioPageProps> = ({ portfolio, simulat
               </div>
             ) : (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--signal)', fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700 }}>
-                <span>●</span> Baseline Simulation (No Active Shock)
+                Baseline Simulation (Active)
               </div>
             )}
           </div>
