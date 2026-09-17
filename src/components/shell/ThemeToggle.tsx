@@ -1,14 +1,11 @@
 import React, { useState, useEffect } from 'react';
 
 export const ThemeToggle: React.FC = () => {
-  const [theme, setTheme] = useState<'light' | 'dark' | null>(null);
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
 
   useEffect(() => {
-    // On mount, resolve from system preference
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const initial = prefersDark ? 'dark' : 'light';
-    setTheme(initial);
-    // Don't set data-theme on mount - let CSS media query handle it
+    // Default to dark cockpit theme
+    document.documentElement.setAttribute('data-theme', 'dark');
   }, []);
 
   const toggle = () => {

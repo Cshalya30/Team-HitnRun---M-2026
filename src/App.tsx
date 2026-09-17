@@ -12,7 +12,6 @@ import { NetworkPage } from './app/network/NetworkPage';
 import { QueuePage } from './app/queue/QueuePage';
 import { PortfolioPage } from './app/portfolio/PortfolioPage';
 import { SystemPage } from './app/system/SystemPage';
-import { GuidedTour } from './components/shell/GuidedTour';
 import { InterventionSimulator } from './components/InterventionSimulator';
 import { useUrlState } from './hooks/useUrlState';
 import './styles/tokens.css';
@@ -28,13 +27,6 @@ export const App: React.FC = () => {
   const [activeShock, setActiveShock] = useState<Shock | null>(null);
   const [activeIntervention, setActiveIntervention] = useState<Intervention | null>(null);
   const [isInterventionModalOpen, setIsInterventionModalOpen] = useState(false);
-
-  // Check if URL restored state on initial load per §4.3 (if so, suppress tour)
-  const [tourActive, setTourActive] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    const params = new URLSearchParams(window.location.search);
-    return !(params.has('borrower') || params.has('scenario') || params.has('week'));
-  });
 
   const [networkFirstVisit, setNetworkFirstVisit] = useState(true);
 
@@ -314,12 +306,6 @@ export const App: React.FC = () => {
           {renderRoute()}
         </div>
       </div>
-
-      {/* Guided first-look tour per §4.3 (one-time in-memory, suppressed on restored URL state) */}
-      <GuidedTour
-        isActive={tourActive && urlState.route === 'network'}
-        onDismiss={() => setTourActive(false)}
-      />
 
       {/* Hoisted Intervention Simulator Modal (rendered at root to avoid CSS transform stacking clipping) */}
       {isInterventionModalOpen && selectedBorrower && (
