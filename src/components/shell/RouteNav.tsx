@@ -32,7 +32,7 @@ export const RouteNav: React.FC<RouteNavProps> = ({ activeRoute, onRouteChange }
             font-size: 12px;
             font-weight: 500;
             text-transform: uppercase;
-            color: var(--ink-2);
+            color: var(--ink-1);
             border-bottom: 2px solid transparent;
             transition: color 120ms cubic-bezier(.2,0,.4,1), border-color 120ms cubic-bezier(.2,0,.4,1);
             display: flex;
@@ -40,10 +40,11 @@ export const RouteNav: React.FC<RouteNavProps> = ({ activeRoute, onRouteChange }
             box-sizing: border-box;
           }
           .route-nav-btn:hover {
-            color: var(--ink-1);
+            color: var(--ink-0);
           }
           .route-nav-btn.active {
             color: var(--ink-0);
+            font-weight: 700;
             border-bottom: 2px solid var(--ink-0);
           }
           .route-nav-btn:focus-visible {

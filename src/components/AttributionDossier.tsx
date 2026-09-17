@@ -527,14 +527,8 @@ export const AttributionDossier: React.FC<AttributionDossierProps> = ({
         </div>
 
         <svg viewBox="0 0 200 64" style={{ width: '100%', height: '60px', overflow: 'visible', display: 'block' }}>
-          <defs>
-            <linearGradient id="bellGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--signal)" stopOpacity="0.30" />
-              <stop offset="100%" stopColor="var(--signal)" stopOpacity="0.0" />
-            </linearGradient>
-          </defs>
           <polyline fill="none" stroke="var(--signal)" strokeWidth="1.75" points={curvePoints} />
-          <polygon fill="url(#bellGrad)" points={`0,58 ${curvePoints} 200,58`} />
+          <polygon fill="rgba(123, 224, 176, 0.12)" points={`0,58 ${curvePoints} 200,58`} />
           {/* Mean marker */}
           <line x1="100" y1="8" x2="100" y2="58" stroke="var(--ink-0)" strokeWidth="1" strokeDasharray="2 2" />
         </svg>

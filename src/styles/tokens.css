@@ -2,16 +2,16 @@
 
 :root {
   /* PART 3: Color Surfaces */
-  --surface-0: #0B0D12; /* page background */
-  --surface-1: #12151D; /* panels, cards, graph canvas background */
-  --surface-2: #1A1F2B; /* raised / hover / active row */
-  --surface-3: #232939; /* popovers, dropdown menus, tooltips (one step above panels) */
-  --hairline: #242B3A;  /* 1px borders, dividers - never 2px */
+  --surface-0: #000000; /* pure pitch black page background */
+  --surface-1: #080A0F; /* deep black cockpit panel surface */
+  --surface-2: #121620; /* raised / hover / active row */
+  --surface-3: #1A202C; /* popovers, dropdown menus, tooltips */
+  --hairline: #222A3A;  /* crisp 1px borders, dividers - never 2px */
 
-  /* Inks */
-  --ink-0: #EAEDF5;     /* primary text, primary numerals */
-  --ink-1: #A7AFC2;     /* secondary text, table body */
-  --ink-2: #6C7689;     /* tertiary: labels, timestamps, captions. NEVER body copy. */
+  /* Inks: high-contrast typography, never blending into background */
+  --ink-0: #FFFFFF;     /* pure white primary text and numerals */
+  --ink-1: #E2E8F0;     /* high-contrast secondary text */
+  --ink-2: #94A3B8;     /* readable light-slate tertiary labels */
 
   /* Stress Semantics: The only three accents that carry meaning. Never decorative. */
   --idio: #E8C468;      /* idiosyncratic (amber, circle ●) */

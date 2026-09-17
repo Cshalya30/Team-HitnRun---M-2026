@@ -68,13 +68,13 @@ export const TopBar: React.FC<TopBarProps> = ({
         <div
           style={{
             fontSize: '11px',
-            color: 'var(--ink-2)',
+            color: 'var(--ink-1)',
             display: 'flex',
             alignItems: 'center',
             gap: 'var(--space-8)',
           }}
         >
-          <span>Mumbai Central, Suburban & Thane</span>
+          <span style={{ color: 'var(--ink-0)', fontWeight: 500 }}>Mumbai Central, Suburban & Thane</span>
           <span>·</span>
           <span>{portfolioStats.wards} wards · {portfolioStats.centres} centres · {portfolioStats.borrowers} borrowers</span>
         </div>
@@ -90,17 +90,17 @@ export const TopBar: React.FC<TopBarProps> = ({
             gap: 'var(--space-6)',
             fontSize: '11px',
             fontFamily: 'var(--font-mono)',
-            color: 'var(--ink-2)',
+            color: 'var(--ink-1)',
           }}
         >
           <span>PROC SEED</span>
-          <span className="tabular-num" style={{ color: 'var(--ink-0)', fontWeight: 500 }}>
+          <span className="tabular-num" style={{ color: 'var(--ink-0)', fontWeight: 600 }}>
             {seed}
           </span>
           <button
             onClick={onCycleSeed}
             className="btn-ghost"
-            style={{ padding: '0 4px', height: '22px', fontSize: '11px' }}
+            style={{ padding: '0 4px', height: '22px', fontSize: '11px', color: 'var(--ink-0)' }}
             title="Cycle deterministic seed"
           >
             ⇄
@@ -114,13 +114,16 @@ export const TopBar: React.FC<TopBarProps> = ({
             height: '28px',
             fontSize: '11px',
             fontFamily: 'var(--font-mono)',
-            borderColor: 'var(--focus)',
-            color: 'var(--focus)',
-            padding: '0 var(--space-8)',
+            fontWeight: 600,
+            borderColor: 'var(--hairline)',
+            backgroundColor: 'var(--surface-2)',
+            color: 'var(--ink-0)',
+            padding: '0 var(--space-12)',
+            cursor: 'pointer',
           }}
-          title="Jump directly to demo state"
+          title="Jump directly to demo state: Week 22, Sunita K. (b-413), Lakshmi Shock"
         >
-          Demo Shortcut
+          Demo: Sunita W22
         </button>
 
         <EvidenceExport
