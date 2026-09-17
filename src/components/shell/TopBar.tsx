@@ -1,7 +1,7 @@
 import React from 'react';
 import { ThemeToggle } from './ThemeToggle';
 import { EvidenceExport } from '../EvidenceExport';
-import { Borrower, Centre, Ward, JLG, StressSnapshot } from '../../engine/types';
+import { Borrower, Centre, Ward, JLG, StressSnapshot, Intervention } from '../../engine/types';
 
 interface TopBarProps {
   seed: number;
@@ -15,6 +15,8 @@ interface TopBarProps {
   currentWeek: number;
   activeRoute: string;
   portfolioStats: { wards: number; centres: number; borrowers: number };
+  activeIntervention?: Intervention | null;
+  onClearIntervention?: () => void;
 }
 
 export const TopBar: React.FC<TopBarProps> = ({
@@ -28,7 +30,9 @@ export const TopBar: React.FC<TopBarProps> = ({
   selectedSnapshot,
   currentWeek,
   activeRoute,
-  portfolioStats
+  portfolioStats,
+  activeIntervention,
+  onClearIntervention,
 }) => {
   return (
     <header
@@ -80,8 +84,43 @@ export const TopBar: React.FC<TopBarProps> = ({
         </div>
       </div>
 
-      {/* Right: Theme Toggle · PROC SEED · Demo Shortcut · Evidence Export */}
+      {/* Right: Theme Toggle · Active Intervention · PROC SEED · Demo Shortcut · Evidence Export */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-16)' }}>
+        {activeIntervention && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: 'rgba(20, 122, 82, 0.2)',
+              border: '1px solid var(--signal)',
+              borderRadius: 'var(--radius-control)',
+              padding: '3px 8px',
+              fontSize: '11px',
+              fontFamily: 'var(--font-mono)',
+              color: 'var(--signal)',
+            }}
+          >
+            <span>● Active: {activeIntervention.title.split('&')[0].trim()}</span>
+            {onClearIntervention && (
+              <button
+                onClick={onClearIntervention}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--signal)',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  padding: '0 2px',
+                }}
+                title="Clear active intervention"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        )}
         <ThemeToggle />
         <div
           style={{

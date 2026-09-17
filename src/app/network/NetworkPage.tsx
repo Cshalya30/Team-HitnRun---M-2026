@@ -3,7 +3,6 @@ import { CanvasGraph } from '../../graph/CanvasGraph';
 import { TimelineSequencer } from '../../components/TimelineSequencer';
 import { AttributionDossier } from '../../components/AttributionDossier';
 import { ScenarioDrawer } from '../../components/ScenarioDrawer';
-import { InterventionSimulator } from '../../components/InterventionSimulator';
 import {
   Borrower,
   Centre,
@@ -39,6 +38,7 @@ interface NetworkPageProps {
   onClearShock: () => void;
   onApplyPolicyPreset: () => void;
   onApplyIntervention: (intv: Intervention) => void;
+  onOpenInterventionModal: () => void;
   /** Whether this is the first visit to /network this session (for boot sequence). */
   isFirstVisit: boolean;
   onBootComplete: () => void;
@@ -58,12 +58,12 @@ export const NetworkPage: React.FC<NetworkPageProps> = ({
   onApplyShock,
   onClearShock,
   onApplyPolicyPreset,
-  onApplyIntervention,
+  onApplyIntervention: _onApplyIntervention,
+  onOpenInterventionModal,
   isFirstVisit,
   onBootComplete,
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isInterventionModalOpen, setIsInterventionModalOpen] = useState(false);
 
   const selectedBorrower = useMemo(() => {
     if (!selectedBorrowerId) return null;
@@ -165,30 +165,10 @@ export const NetworkPage: React.FC<NetworkPageProps> = ({
             snapshot={selectedSnapshot}
             transientMetric={currentTransientMetric}
             onSelectBorrowerId={onSelectBorrower}
-            onOpenInterventionModal={() => setIsInterventionModalOpen(true)}
+            onOpenInterventionModal={onOpenInterventionModal}
           />
         </section>
       </div>
-
-      {/* Intervention modal */}
-      {isInterventionModalOpen && selectedBorrower && (
-        <InterventionSimulator
-          wards={portfolio.wards}
-          officers={portfolio.officers}
-          centres={portfolio.centres}
-          jlgs={portfolio.jlgs}
-          borrowers={portfolio.borrowers}
-          edges={portfolio.edges}
-          activeShock={activeShock}
-          targetBorrower={selectedBorrower}
-          currentWeek={currentWeek}
-          onApplyIntervention={intv => {
-            onApplyIntervention(intv);
-            setIsInterventionModalOpen(false);
-          }}
-          onClose={() => setIsInterventionModalOpen(false)}
-        />
-      )}
     </div>
   );
 };

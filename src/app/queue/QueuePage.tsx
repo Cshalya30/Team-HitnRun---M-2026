@@ -21,6 +21,7 @@ interface QueuePageProps {
   currentTransientMetric: TransientWeeklyMetrics | undefined;
   selectedBorrowerId: string;
   onSelectBorrower: (id: string) => void;
+  onOpenInterventionModal?: () => void;
 }
 
 export const QueuePage: React.FC<QueuePageProps> = ({
@@ -29,6 +30,7 @@ export const QueuePage: React.FC<QueuePageProps> = ({
   currentTransientMetric,
   selectedBorrowerId,
   onSelectBorrower,
+  onOpenInterventionModal,
 }) => {
   // Sort borrowers by latent stress (highest first), escalated first
   const sortedBorrowers = useMemo(() => {
@@ -171,9 +173,7 @@ export const QueuePage: React.FC<QueuePageProps> = ({
               snapshot={selectedSnapshot}
               transientMetric={currentTransientMetric}
               onSelectBorrowerId={onSelectBorrower}
-              onOpenInterventionModal={() => {
-                // No intervention modal on queue page
-              }}
+              onOpenInterventionModal={onOpenInterventionModal}
             />
           </div>
         )}

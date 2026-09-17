@@ -8,6 +8,7 @@ import {
   JLG,
   Officer,
   Shock,
+  StressSnapshot,
   Ward,
 } from './types';
 
@@ -83,14 +84,19 @@ export function simulateInterventionComparison(
   edges: Edge[],
   activeShock: Shock | null,
   intervention: Intervention,
-  targetBorrowerId: string
+  targetBorrowerId: string,
+  existingBaselineSnapshots?: StressSnapshot[]
 ): TrajectoryPoint[] {
-  // Run baseline simulation (without intervention)
-  const baselineSim = simulatePortfolioContagion(wards, officers, centres, jlgs, borrowers, edges, {
-    totalWeeks: 78,
-    shock: activeShock,
-    intervention: null,
-  });
+  // Use existing baseline snapshots if provided, otherwise run baseline simulation
+  let baselineSnapshots = existingBaselineSnapshots;
+  if (!baselineSnapshots || baselineSnapshots.length === 0) {
+    const baselineSim = simulatePortfolioContagion(wards, officers, centres, jlgs, borrowers, edges, {
+      totalWeeks: 78,
+      shock: activeShock,
+      intervention: null,
+    });
+    baselineSnapshots = baselineSim.snapshotsByBorrower.get(targetBorrowerId) || [];
+  }
 
   // Run mitigated simulation (with intervention)
   const mitigatedSim = simulatePortfolioContagion(wards, officers, centres, jlgs, borrowers, edges, {
@@ -99,7 +105,6 @@ export function simulateInterventionComparison(
     intervention,
   });
 
-  const baselineSnapshots = baselineSim.snapshotsByBorrower.get(targetBorrowerId) || [];
   const mitigatedSnapshots = mitigatedSim.snapshotsByBorrower.get(targetBorrowerId) || [];
 
   const trajectory: TrajectoryPoint[] = [];

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   INTERVENTION_PRESETS,
   simulateInterventionComparison,
@@ -13,6 +13,7 @@ import {
   JLG,
   Officer,
   Shock,
+  StressSnapshot,
   Ward,
 } from '../engine/types';
 
@@ -26,6 +27,7 @@ interface InterventionSimulatorProps {
   activeShock: Shock | null;
   targetBorrower: Borrower;
   currentWeek: number;
+  baselineSnapshots?: StressSnapshot[];
   onApplyIntervention: (intervention: Intervention) => void;
   onClose: () => void;
 }
@@ -40,13 +42,14 @@ export const InterventionSimulator: React.FC<InterventionSimulatorProps> = ({
   activeShock,
   targetBorrower,
   currentWeek,
+  baselineSnapshots,
   onApplyIntervention,
   onClose,
 }) => {
   const [selectedType, setSelectedType] = useState<InterventionType>('moratorium');
 
   const preset = INTERVENTION_PRESETS[selectedType];
-  const intervention: Intervention = {
+  const intervention: Intervention = useMemo(() => ({
     id: `intv-${selectedType}`,
     type: selectedType,
     title: preset.title,
@@ -56,19 +59,22 @@ export const InterventionSimulator: React.FC<InterventionSimulatorProps> = ({
     targetWardId: targetBorrower.wardId,
     appliedWeek: currentWeek,
     durationWeeks: preset.defaultDurationWeeks,
-  };
+  }), [selectedType, preset, targetBorrower, currentWeek]);
 
-  const trajectory: TrajectoryPoint[] = simulateInterventionComparison(
-    wards,
-    officers,
-    centres,
-    jlgs,
-    borrowers,
-    edges,
-    activeShock,
-    intervention,
-    targetBorrower.id
-  );
+  const trajectory: TrajectoryPoint[] = useMemo(() => {
+    return simulateInterventionComparison(
+      wards,
+      officers,
+      centres,
+      jlgs,
+      borrowers,
+      edges,
+      activeShock,
+      intervention,
+      targetBorrower.id,
+      baselineSnapshots
+    );
+  }, [wards, officers, centres, jlgs, borrowers, edges, activeShock, intervention, targetBorrower.id, baselineSnapshots]);
 
   const maxBase = Math.max(...trajectory.map(t => t.baselineStress));
   const maxMitigated = Math.max(...trajectory.map(t => t.interventionStress));
@@ -96,13 +102,12 @@ export const InterventionSimulator: React.FC<InterventionSimulatorProps> = ({
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(11, 13, 18, 0.85)',
+        backgroundColor: 'rgba(0, 0, 0, 0.88)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 'var(--z-modal)' as any,
+        zIndex: 9999,
         padding: 'var(--space-24)',
-        backdropFilter: 'blur(4px)',
       }}
       role="dialog"
       aria-modal="true"
@@ -244,17 +249,6 @@ export const InterventionSimulator: React.FC<InterventionSimulatorProps> = ({
             viewBox={`0 0 ${chartWidth} ${chartHeight}`}
             style={{ width: '100%', height: 'auto', display: 'block', overflow: 'visible' }}
           >
-            <defs>
-              <linearGradient id="baselineGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--induced)" stopOpacity="0.2" />
-                <stop offset="100%" stopColor="var(--induced)" stopOpacity="0.0" />
-              </linearGradient>
-              <linearGradient id="mitigatedGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--signal)" stopOpacity="0.2" />
-                <stop offset="100%" stopColor="var(--signal)" stopOpacity="0.0" />
-              </linearGradient>
-            </defs>
-
             {/* Gridlines */}
             <line x1={padding.left} y1={getY(0.5)} x2={padding.left + innerWidth} y2={getY(0.5)} stroke="var(--hairline)" strokeDasharray="3 3" />
             <line x1={padding.left} y1={getY(0.35)} x2={padding.left + innerWidth} y2={getY(0.35)} stroke="rgba(224, 90, 107, 0.25)" strokeDasharray="3 3" />
@@ -283,9 +277,9 @@ export const InterventionSimulator: React.FC<InterventionSimulatorProps> = ({
             <text x={padding.left + innerWidth / 2} y={chartHeight - 6} fill="var(--ink-2)" fontSize="10" textAnchor="middle" fontFamily="var(--font-mono)">WK39</text>
             <text x={padding.left + innerWidth} y={chartHeight - 6} fill="var(--ink-2)" fontSize="10" textAnchor="end" fontFamily="var(--font-mono)">WK78</text>
 
-            {/* Fills */}
-            <polygon points={baselineArea} fill="url(#baselineGrad)" />
-            <polygon points={mitigatedArea} fill="url(#mitigatedGrad)" />
+            {/* Fills without gradients */}
+            <polygon points={baselineArea} fill="rgba(224, 90, 107, 0.12)" />
+            <polygon points={mitigatedArea} fill="rgba(123, 224, 176, 0.12)" />
 
             {/* Lines */}
             <polyline fill="none" stroke="var(--induced)" strokeWidth="1.75" points={baselinePoints} />

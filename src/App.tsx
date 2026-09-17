@@ -13,6 +13,7 @@ import { QueuePage } from './app/queue/QueuePage';
 import { PortfolioPage } from './app/portfolio/PortfolioPage';
 import { SystemPage } from './app/system/SystemPage';
 import { GuidedTour } from './components/shell/GuidedTour';
+import { InterventionSimulator } from './components/InterventionSimulator';
 import { useUrlState } from './hooks/useUrlState';
 import './styles/tokens.css';
 
@@ -26,6 +27,7 @@ export const App: React.FC = () => {
 
   const [activeShock, setActiveShock] = useState<Shock | null>(null);
   const [activeIntervention, setActiveIntervention] = useState<Intervention | null>(null);
+  const [isInterventionModalOpen, setIsInterventionModalOpen] = useState(false);
 
   // Check if URL restored state on initial load per §4.3 (if so, suppress tour)
   const [tourActive, setTourActive] = useState(() => {
@@ -191,6 +193,7 @@ export const App: React.FC = () => {
             currentTransientMetric={currentTransientMetric}
             selectedBorrowerId={urlState.borrowerId}
             onSelectBorrower={setBorrowerId}
+            onOpenInterventionModal={() => setIsInterventionModalOpen(true)}
           />
         );
       case 'network':
@@ -210,6 +213,7 @@ export const App: React.FC = () => {
             onClearShock={handleClearShock}
             onApplyPolicyPreset={handleApplyPolicyPreset}
             onApplyIntervention={intv => setActiveIntervention(intv)}
+            onOpenInterventionModal={() => setIsInterventionModalOpen(true)}
             isFirstVisit={isNetworkFirstVisit}
             onBootComplete={handleBootComplete}
           />
@@ -269,6 +273,7 @@ export const App: React.FC = () => {
             onClearShock={handleClearShock}
             onApplyPolicyPreset={handleApplyPolicyPreset}
             onApplyIntervention={intv => setActiveIntervention(intv)}
+            onOpenInterventionModal={() => setIsInterventionModalOpen(true)}
             isFirstVisit={isNetworkFirstVisit}
             onBootComplete={handleBootComplete}
           />
@@ -294,6 +299,8 @@ export const App: React.FC = () => {
           centres: portfolio.centres.length,
           borrowers: portfolio.borrowers.length,
         }}
+        activeIntervention={activeIntervention}
+        onClearIntervention={() => setActiveIntervention(null)}
       />
 
       <RouteNav
@@ -313,6 +320,27 @@ export const App: React.FC = () => {
         isActive={tourActive && urlState.route === 'network'}
         onDismiss={() => setTourActive(false)}
       />
+
+      {/* Hoisted Intervention Simulator Modal (rendered at root to avoid CSS transform stacking clipping) */}
+      {isInterventionModalOpen && selectedBorrower && (
+        <InterventionSimulator
+          wards={portfolio.wards}
+          officers={portfolio.officers}
+          centres={portfolio.centres}
+          jlgs={portfolio.jlgs}
+          borrowers={portfolio.borrowers}
+          edges={portfolio.edges}
+          activeShock={activeShock}
+          targetBorrower={selectedBorrower}
+          currentWeek={urlState.week}
+          baselineSnapshots={simulation.snapshotsByBorrower.get(selectedBorrower.id)}
+          onApplyIntervention={intv => {
+            setActiveIntervention(intv);
+            setIsInterventionModalOpen(false);
+          }}
+          onClose={() => setIsInterventionModalOpen(false)}
+        />
+      )}
     </div>
   );
 };
