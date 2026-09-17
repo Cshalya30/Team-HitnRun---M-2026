@@ -1,4 +1,5 @@
 import React from 'react';
+import { ThemeToggle } from './ThemeToggle';
 import { EvidenceExport } from '../EvidenceExport';
 import { Borrower, Centre, Ward, JLG, StressSnapshot, Intervention } from '../../engine/types';
 
@@ -120,6 +121,7 @@ export const TopBar: React.FC<TopBarProps> = ({
             )}
           </div>
         )}
+        <ThemeToggle />
         <div
           style={{
             display: 'flex',

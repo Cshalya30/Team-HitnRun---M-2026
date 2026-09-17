@@ -358,8 +358,10 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, width, height);
 
-    // Deep Cockpit Background: Pure Pitch Black (#000000)
-    ctx.fillStyle = '#000000';
+    const isLightMode = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light';
+
+    // Canvas Background: Actual Pitch Black (#000000) or Clean White (#FFFFFF)
+    ctx.fillStyle = isLightMode ? '#FFFFFF' : '#000000';
     ctx.fillRect(0, 0, width, height);
 
     ctx.translate(transform.x, transform.y);
@@ -410,7 +412,8 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
     // 1. Batched Edges Rendering (Draws 10,000+ links in exactly 2 GPU draw calls)
     if (edgeBaseOpacity > 0 || selectedBorrowerId) {
       const normalOpacity = selectedBorrowerId ? 0.03 : edgeBaseOpacity;
-      ctx.strokeStyle = `rgba(255, 255, 255, ${normalOpacity.toFixed(3)})`;
+      const edgeRgb = isLightMode ? '0, 0, 0' : '255, 255, 255';
+      ctx.strokeStyle = `rgba(${edgeRgb}, ${normalOpacity.toFixed(3)})`;
       ctx.lineWidth = selectedBorrowerId ? 0.5 : 0.8;
       ctx.beginPath();
 
@@ -436,9 +439,9 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
       }
       ctx.stroke();
 
-      // Highlighted attribution evidence edges (high contrast pure white, thick glowing stroke)
+      // Highlighted attribution evidence edges (high contrast white in dark, dark slate in light)
       if (highlightedEdges.length > 0) {
-        ctx.strokeStyle = '#FFFFFF';
+        ctx.strokeStyle = isLightMode ? '#0F172A' : '#FFFFFF';
         ctx.lineWidth = 2.4;
         ctx.beginPath();
         for (let i = 0; i < highlightedEdges.length; i++) {
@@ -543,13 +546,13 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
       const boxX = originNode.x - boxW / 2;
       const boxY = originNode.y - r - boxH - 6;
 
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
+      ctx.fillStyle = isLightMode ? 'rgba(255, 255, 255, 0.98)' : 'rgba(0, 0, 0, 0.9)';
       ctx.strokeStyle = COLOR_INDUCED;
       ctx.lineWidth = 1;
       ctx.fillRect(boxX, boxY, boxW, boxH);
       ctx.strokeRect(boxX, boxY, boxW, boxH);
 
-      ctx.fillStyle = '#FFFFFF';
+      ctx.fillStyle = isLightMode ? '#0F172A' : '#FFFFFF';
       ctx.fillText(label, boxX + 7, boxY + 14);
     }
 
@@ -559,17 +562,17 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
       const isInduced = snap?.dominantStressType === 'induced';
       const r = Math.max(7, Math.min(12, 6 + (snap?.latentStress ?? 0.5) * 6));
 
-      // Outer focus glow ring (bright white)
+      // Outer focus glow ring (bright white in dark, dark slate in light)
       ctx.beginPath();
       ctx.arc(selectedNode.x, selectedNode.y, r + 5, 0, Math.PI * 2);
-      ctx.strokeStyle = '#FFFFFF';
+      ctx.strokeStyle = isLightMode ? '#0F172A' : '#FFFFFF';
       ctx.lineWidth = 2.5;
       ctx.stroke();
 
       // Second soft ring
       ctx.beginPath();
       ctx.arc(selectedNode.x, selectedNode.y, r + 9, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+      ctx.strokeStyle = isLightMode ? 'rgba(15, 23, 42, 0.35)' : 'rgba(255, 255, 255, 0.45)';
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
@@ -578,7 +581,7 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
       ctx.arc(selectedNode.x, selectedNode.y, r, 0, Math.PI * 2);
       ctx.fillStyle = isInduced ? COLOR_INDUCED : COLOR_IDIO;
       ctx.fill();
-      ctx.strokeStyle = '#FFFFFF';
+      ctx.strokeStyle = isLightMode ? '#0F172A' : '#FFFFFF';
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
@@ -597,8 +600,8 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
       const badgeX = selectedNode.x - badgeW / 2;
       const badgeY = selectedNode.y - r - badgeH - 12;
 
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
-      ctx.strokeStyle = '#FFFFFF';
+      ctx.fillStyle = isLightMode ? 'rgba(255, 255, 255, 0.98)' : 'rgba(0, 0, 0, 0.95)';
+      ctx.strokeStyle = isLightMode ? '#0F172A' : '#FFFFFF';
       ctx.lineWidth = 1.5;
       ctx.fillRect(badgeX, badgeY, badgeW, badgeH);
       ctx.strokeRect(badgeX, badgeY, badgeW, badgeH);
@@ -608,15 +611,15 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
       ctx.moveTo(selectedNode.x - 5, badgeY + badgeH);
       ctx.lineTo(selectedNode.x + 5, badgeY + badgeH);
       ctx.lineTo(selectedNode.x, badgeY + badgeH + 6);
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
+      ctx.fillStyle = isLightMode ? 'rgba(255, 255, 255, 0.98)' : 'rgba(0, 0, 0, 0.95)';
       ctx.fill();
 
-      // Badge texts in high-contrast bright white and semantic red
-      ctx.fillStyle = '#FFFFFF';
+      // Badge texts in high-contrast
+      ctx.fillStyle = isLightMode ? '#0F172A' : '#FFFFFF';
       ctx.font = 'bold 11px "JetBrains Mono", monospace';
       ctx.fillText(nameText, badgeX + 10, badgeY + 14);
 
-      ctx.fillStyle = isInduced ? COLOR_INDUCED : '#E2E8F0';
+      ctx.fillStyle = isInduced ? COLOR_INDUCED : (isLightMode ? '#475569' : '#E2E8F0');
       ctx.font = '10px "Inter", sans-serif';
       ctx.fillText(subText, badgeX + 10, badgeY + 27);
     }
@@ -624,9 +627,15 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
     ctx.restore();
   }, [transform, currentWeekSnapshots, selectedBorrowerId, cascadeOriginBorrowerId]);
 
-  // Request Render: redraws immediately when state changes or when scheduled
+  // Request Render: redraws immediately when state changes or when theme changes
   useEffect(() => {
     renderCanvas();
+  }, [renderCanvas]);
+
+  useEffect(() => {
+    const handleTheme = () => renderCanvas();
+    window.addEventListener('themechange', handleTheme);
+    return () => window.removeEventListener('themechange', handleTheme);
   }, [renderCanvas]);
 
   // Animation loop: ONLY active during the 1.3s boot sequence or during active dragging
