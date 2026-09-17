@@ -65,8 +65,6 @@ export const PortfolioPage: React.FC<PortfolioPageProps> = ({ portfolio, simulat
         color: 'var(--ink-0)', 
         fontFamily: 'var(--font-body)',
         minHeight: '100%',
-        height: 'auto',
-        overflowY: 'auto',
         display: 'flex',
         flexDirection: 'column',
         gap: 'var(--space-24)',

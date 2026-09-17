@@ -151,6 +151,53 @@ body {
   user-select: none;
 }
 
+/* Custom Neo-Brutalist High-Visibility Scrollbars */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface-0);
+  border-left: 2px solid var(--hairline);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--idio);
+  border: 2px solid #000000;
+  border-radius: 2px;
+  box-shadow: 1px 1px 0px #000000;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--induced);
+}
+
+:root:not([data-theme="light"]) ::-webkit-scrollbar-track {
+  background: #000000;
+  border-left: 2px solid #222222;
+}
+
+:root:not([data-theme="light"]) ::-webkit-scrollbar-thumb {
+  background: #00FF66;
+  border: 2px solid #000000;
+  box-shadow: 1px 1px 0px #00FF66;
+}
+
+:root:not([data-theme="light"]) ::-webkit-scrollbar-thumb:hover {
+  background: #FF007F;
+  box-shadow: 1px 1px 0px #FF007F;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--idio) var(--surface-0);
+}
+
+:root:not([data-theme="light"]) * {
+  scrollbar-color: #00FF66 #000000;
+}
+
 /* Numerals ALWAYS monospace tabular */
 .tabular-num,
 .mono-num,

@@ -301,7 +301,7 @@ export const App: React.FC = () => {
       />
 
       {/* Route content area with 280ms transition per §4.1 */}
-      <div style={{ flex: 1, minHeight: 0, overflow: urlState.route === 'network' ? 'hidden' : 'auto' }}>
+      <div style={{ flex: 1, minHeight: 0, overflowY: urlState.route === 'network' ? 'hidden' : 'auto', overflowX: 'hidden' }}>
         <div key={urlState.route} className="route-enter" style={{ minHeight: '100%', height: urlState.route === 'network' ? '100%' : 'auto' }}>
           {renderRoute()}
         </div>
