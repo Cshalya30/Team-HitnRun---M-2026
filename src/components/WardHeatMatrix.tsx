@@ -9,7 +9,7 @@ interface WardHeatMatrixProps {
   error?: string | null;
 }
 
-type SortField = 'name' | 'flaggedCount' | 'escalatedCount' | 'avgLatentStress' | 'contagionVelocity';
+type SortField = 'name' | 'flaggedCount' | 'escalatedCount' | 'suppressedCount' | 'avgLatentStress' | 'contagionVelocity';
 
 export const WardHeatMatrix: React.FC<WardHeatMatrixProps> = ({
   wardAggregates,
@@ -160,6 +160,9 @@ export const WardHeatMatrix: React.FC<WardHeatMatrixProps> = ({
             <th onClick={() => handleSort('escalatedCount')} style={{ textAlign: 'right', cursor: 'pointer' }}>
               Escalated Alerts {sortField === 'escalatedCount' ? (sortAsc ? '↑' : '↓') : ''}
             </th>
+            <th onClick={() => handleSort('suppressedCount')} style={{ textAlign: 'right', cursor: 'pointer' }}>
+              Suppressed {sortField === 'suppressedCount' ? (sortAsc ? '↑' : '↓') : ''}
+            </th>
             <th onClick={() => handleSort('avgLatentStress')} style={{ textAlign: 'right', cursor: 'pointer' }}>
               Mean Stress {sortField === 'avgLatentStress' ? (sortAsc ? '↑' : '↓') : ''}
             </th>
@@ -196,6 +199,11 @@ export const WardHeatMatrix: React.FC<WardHeatMatrixProps> = ({
                 <td style={{ textAlign: 'right' }} className="tabular-num">
                   <span style={{ color: w.escalatedCount > 0 ? 'var(--induced)' : 'var(--ink-1)', fontWeight: 500 }}>
                     {w.escalatedCount > 0 ? `▲ ${w.escalatedCount}` : w.escalatedCount}
+                  </span>
+                </td>
+                <td style={{ textAlign: 'right' }} className="tabular-num">
+                  <span style={{ color: w.suppressedCount > 0 ? 'var(--signal)' : 'var(--ink-1)', fontWeight: 500 }}>
+                    {w.suppressedCount > 0 ? w.suppressedCount : 0}
                   </span>
                 </td>
                 <td

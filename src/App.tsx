@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   generateSyntheticPortfolio,
   simulatePortfolioContagion,
@@ -6,32 +6,35 @@ import {
   Intervention,
   createPolicyRefinancingCutoffShock,
 } from './engine';
-import { CanvasGraph } from './graph/CanvasGraph';
-import { TimelineSequencer } from './components/TimelineSequencer';
-import { AttributionDossier } from './components/AttributionDossier';
-import { ScenarioDrawer } from './components/ScenarioDrawer';
-import { InterventionSimulator } from './components/InterventionSimulator';
-import { WardHeatMatrix } from './components/WardHeatMatrix';
-import { EvidenceExport } from './components/EvidenceExport';
-import { AccessibleBorrowerTable } from './components/AccessibleBorrowerTable';
+import { TopBar } from './components/shell/TopBar';
+import { RouteNav } from './components/shell/RouteNav';
+import { NetworkPage } from './app/network/NetworkPage';
+import { QueuePage } from './app/queue/QueuePage';
+import { PortfolioPage } from './app/portfolio/PortfolioPage';
+import { SystemPage } from './app/system/SystemPage';
+import { GuidedTour } from './components/shell/GuidedTour';
 import { useUrlState } from './hooks/useUrlState';
 import './styles/tokens.css';
 
 export const App: React.FC = () => {
-  const { state: urlState, setWeek, setBorrowerId, setScenario, setSeed } = useUrlState({
+  const { state: urlState, setWeek, setBorrowerId, setScenario, setSeed, setRoute } = useUrlState({
     seed: 481516,
     week: 12,
-    borrowerId: '', // Default to empty per Part 4.4 empty state rule
+    borrowerId: '',
     scenario: 'baseline',
   });
 
-  const [isPlaying, setIsPlaying] = useState(false);
   const [activeShock, setActiveShock] = useState<Shock | null>(null);
   const [activeIntervention, setActiveIntervention] = useState<Intervention | null>(null);
-  const [isInterventionModalOpen, setIsInterventionModalOpen] = useState(false);
-  const [selectedWardId, setSelectedWardId] = useState<string | null>(null);
-  const [bottomTab, setBottomTab] = useState<'matrix' | 'table'>('matrix');
-  const [isTableExpanded, setIsTableExpanded] = useState(false);
+
+  // Check if URL restored state on initial load per §4.3 (if so, suppress tour)
+  const [tourActive, setTourActive] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const params = new URLSearchParams(window.location.search);
+    return !(params.has('borrower') || params.has('scenario') || params.has('week'));
+  });
+
+  const [networkFirstVisit, setNetworkFirstVisit] = useState(true);
 
   // Portfolio generation
   const portfolio = useMemo(() => {
@@ -75,16 +78,13 @@ export const App: React.FC = () => {
     return map;
   }, [simulation, urlState.week]);
 
-  const currentWardAggregates = useMemo(() => {
-    const weekIndex = Math.min(78, Math.max(1, urlState.week));
-    return simulation.wardAggregatesByWeek[weekIndex - 1] || [];
-  }, [simulation, urlState.week]);
 
   const currentTransientMetric = useMemo(() => {
     const weekIndex = Math.min(78, Math.max(1, urlState.week));
     return simulation.transientMetrics[weekIndex - 1];
   }, [simulation, urlState.week]);
 
+  // Selected borrower lookups for TopBar
   const selectedBorrower = useMemo(() => {
     if (!urlState.borrowerId) return null;
     return portfolio.borrowers.find(b => b.id === urlState.borrowerId) || null;
@@ -131,22 +131,36 @@ export const App: React.FC = () => {
     setScenario('policy_cutoff');
   };
 
+  const handleDemoShortcut = () => {
+    setSeed(481516);
+    setWeek(22);
+    setBorrowerId('b-413');
+    setScenario('lakshmi-shock');
+    setActiveShock({
+      type: 'borrower',
+      targetId: 'b-411',
+      targetName: 'Lakshmi R. (Medical Shock)',
+      startWeek: 19,
+      magnitude: 0.92,
+    });
+    setRoute('network');
+  };
+
   // Keyboard shortcut listener for spacebar transport
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         return;
       }
-      if (e.code === 'Space') {
+      if (e.code === 'Space' && urlState.route === 'network') {
         e.preventDefault();
-        setIsPlaying(prev => !prev);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [urlState.route]);
 
-  // Handle URL scenario='lakshmi-shock' or 'lakshmi_shock'
+  // Handle URL scenario='lakshmi-shock'
   useEffect(() => {
     if (urlState.scenario === 'lakshmi-shock' || urlState.scenario === 'lakshmi_shock') {
       setActiveShock({
@@ -159,327 +173,146 @@ export const App: React.FC = () => {
     }
   }, [urlState.scenario]);
 
-  return (
-    <div className="cockpit-container">
-      {/* 1. TOP BAR (56px, sticky header z-index 20) */}
-      <header
-        style={{
-          height: '56px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '0 var(--space-24)',
-          backgroundColor: 'var(--surface-0)',
-          borderBottom: '1px solid var(--hairline)',
-          zIndex: 'var(--z-sticky)' as any,
-          flexShrink: 0,
-        }}
-      >
-        {/* Left: Wordmark · Breadcrumb · Plain-text Portfolio Meta */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-16)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-8)' }}>
-            <span
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: '16px',
-                fontWeight: 700,
-                letterSpacing: '-0.02em',
-                color: 'var(--ink-0)',
-              }}
-            >
-              TREMOR
-            </span>
-            <span style={{ color: 'var(--hairline)' }}>/</span>
-            <span style={{ fontSize: '12px', color: 'var(--ink-1)' }}>
-              Group-Contagion Diagnostic
-            </span>
-          </div>
+  const handleBootComplete = () => {
+    setNetworkFirstVisit(false);
+  };
 
-          <div
-            style={{
-              fontSize: '11px',
-              color: 'var(--ink-2)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 'var(--space-8)',
-            }}
-          >
-            <span>Mumbai Central & Suburban</span>
-            <span>·</span>
-            <span>4 wards · 24 centres · 425 borrowers</span>
-          </div>
-        </div>
+  // Determine if this is a first visit to network (boot sequence check)
+  const isNetworkFirstVisit = urlState.route === 'network' && networkFirstVisit;
 
-        {/* Right: PROC SEED · Evidence Export Slide-over Trigger */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-16)' }}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 'var(--space-6)',
-              fontSize: '11px',
-              fontFamily: 'var(--font-mono)',
-              color: 'var(--ink-2)',
-            }}
-          >
-            <span>PROC SEED</span>
-            <span className="tabular-num" style={{ color: 'var(--ink-0)', fontWeight: 500 }}>
-              {urlState.seed}
-            </span>
-            <button
-              onClick={() => setSeed(urlState.seed === 481516 ? 928374 : 481516)}
-              className="btn-ghost"
-              style={{ padding: '0 4px', height: '22px', fontSize: '11px' }}
-              title="Cycle deterministic seed"
-            >
-              ⇄
-            </button>
-          </div>
-
-          {/* 6. Demo Shortcut Button (Part 6: Week 22, Sunita b-413, Lakshmi Shock) */}
-          <button
-            className="btn-secondary"
-            onClick={() => {
-              setSeed(481516);
-              setWeek(22);
-              setBorrowerId('b-413');
-              setScenario('lakshmi-shock');
-              setActiveShock({
-                type: 'borrower',
-                targetId: 'b-411',
-                targetName: 'Lakshmi R. (Medical Shock)',
-                startWeek: 19,
-                magnitude: 0.92,
-              });
-            }}
-            style={{
-              height: '28px',
-              fontSize: '11px',
-              fontFamily: 'var(--font-mono)',
-              borderColor: 'var(--focus)',
-              color: 'var(--focus)',
-              padding: '0 var(--space-8)',
-            }}
-            title="Jump directly to demo state: Week 22, Sunita K. (b-413), Lakshmi Shock"
-          >
-            ⚡ Demo: Sunita W22
-          </button>
-
-          <EvidenceExport
-            seed={urlState.seed}
-            currentWeek={urlState.week}
-            borrower={selectedBorrower}
-            centre={selectedCentre}
-            ward={selectedWard}
-            jlg={selectedJlg}
-            snapshot={selectedSnapshot}
+  // Render active route
+  const renderRoute = () => {
+    switch (urlState.route) {
+      case 'queue':
+        return (
+          <QueuePage
+            portfolio={portfolio}
+            currentWeekSnapshots={currentWeekSnapshots}
+            currentTransientMetric={currentTransientMetric}
+            selectedBorrowerId={urlState.borrowerId}
+            onSelectBorrower={setBorrowerId}
           />
-        </div>
-      </header>
-
-      {/* 2. SCRUBBER (64px, z-index 20) */}
-      <TimelineSequencer
-        currentWeek={urlState.week}
-        totalWeeks={78}
-        isPlaying={isPlaying}
-        onWeekChange={w => setWeek(w)}
-        onTogglePlay={() => setIsPlaying(prev => !prev)}
-        onStepForward={() => setWeek(Math.min(78, urlState.week + 1))}
-        onStepBackward={() => setWeek(Math.max(1, urlState.week - 1))}
-        weeklyStressScores={weeklyStressScores}
-      />
-
-      {/* 3. MAIN COCKPIT: Asymmetric 62% (Graph) / 38% (Attribution Rail) Split */}
-      <main className="cockpit-main">
-        {/* Left Column: Contagion Graph Canvas + Scenario Chips (44px) */}
-        <section
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 'var(--space-12)',
-            height: '100%',
-            minHeight: 0,
-          }}
-          aria-label="Contagion Network Visualization"
-        >
-          <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
-            <CanvasGraph
-              wards={portfolio.wards}
-              centres={portfolio.centres}
-              jlgs={portfolio.jlgs}
-              borrowers={portfolio.borrowers}
-              edges={portfolio.edges}
-              currentWeekSnapshots={currentWeekSnapshots}
-              selectedBorrowerId={urlState.borrowerId || null}
-              onSelectBorrower={id => setBorrowerId(id)}
-              cascadeOriginBorrowerId={activeShock?.type === 'borrower' ? activeShock.targetId : 'b-411'}
-              currentWeek={urlState.week}
-            />
-          </div>
-
-          {/* 4. SCENARIO INJECTION CHIPS (44px) */}
-          <ScenarioDrawer
-            wards={portfolio.wards}
-            officers={portfolio.officers}
-            activeShock={activeShock}
+        );
+      case 'network':
+        return (
+          <NetworkPage
+            portfolio={portfolio}
+            currentWeekSnapshots={currentWeekSnapshots}
+            currentTransientMetric={currentTransientMetric}
+            weeklyStressScores={weeklyStressScores}
             currentWeek={urlState.week}
+            onWeekChange={setWeek}
+            selectedBorrowerId={urlState.borrowerId}
+            onSelectBorrower={setBorrowerId}
+            activeShock={activeShock}
+            activeIntervention={activeIntervention}
             onApplyShock={handleApplyShock}
             onClearShock={handleClearShock}
             onApplyPolicyPreset={handleApplyPolicyPreset}
+            onApplyIntervention={intv => setActiveIntervention(intv)}
+            isFirstVisit={isNetworkFirstVisit}
+            onBootComplete={handleBootComplete}
           />
-        </section>
-
-        {/* Right Column: Borrower Detail Rail (38% width) */}
-        <section
-          style={{
-            height: '100%',
-            minHeight: 0,
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-          aria-label="Borrower Attribution Dossier"
-        >
-          <AttributionDossier
-            borrower={selectedBorrower}
-            centre={selectedCentre}
-            ward={selectedWard}
-            jlg={selectedJlg}
-            snapshot={selectedSnapshot}
-            transientMetric={currentTransientMetric}
-            onSelectBorrowerId={id => setBorrowerId(id)}
-            onOpenInterventionModal={() => setIsInterventionModalOpen(true)}
+        );
+      case 'portfolio':
+        return (
+          <PortfolioPage
+            portfolio={portfolio}
+            simulation={simulation}
+            currentWeek={urlState.week}
+            onApplyPolicyPreset={handleApplyPolicyPreset}
+            activeShock={activeShock}
           />
-        </section>
-      </main>
-
-      {/* 5. TABS & COLLAPSIBLE DATA TABLE DRAWER (36px Tab bar, variable drawer) */}
-      <footer
-        style={{
-          flexShrink: 0,
-          borderTop: '1px solid var(--hairline)',
-          backgroundColor: 'var(--surface-0)',
-          zIndex: 'var(--z-panel)' as any,
-        }}
-      >
-        {/* 36px Tab Bar */}
-        <div
-          style={{
-            height: '36px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '0 var(--space-24)',
-          }}
-        >
-          <div style={{ display: 'flex', gap: 'var(--space-8)' }}>
-            <button
-              className={`btn-secondary ${isTableExpanded && bottomTab === 'matrix' ? 'active' : ''}`}
-              onClick={() => {
-                if (isTableExpanded && bottomTab === 'matrix') {
-                  setIsTableExpanded(false);
-                } else {
-                  setBottomTab('matrix');
-                  setIsTableExpanded(true);
-                }
-              }}
-              style={{
-                height: '26px',
-                fontSize: '11px',
-                fontFamily: 'var(--font-mono)',
-                borderColor: isTableExpanded && bottomTab === 'matrix' ? 'var(--ink-0)' : 'var(--hairline)',
-                color: isTableExpanded && bottomTab === 'matrix' ? 'var(--ink-0)' : 'var(--ink-1)',
-              }}
-            >
-              Ward Exposure Matrix
-            </button>
-            <button
-              className={`btn-secondary ${isTableExpanded && bottomTab === 'table' ? 'active' : ''}`}
-              onClick={() => {
-                if (isTableExpanded && bottomTab === 'table') {
-                  setIsTableExpanded(false);
-                } else {
-                  setBottomTab('table');
-                  setIsTableExpanded(true);
-                }
-              }}
-              style={{
-                height: '26px',
-                fontSize: '11px',
-                fontFamily: 'var(--font-mono)',
-                borderColor: isTableExpanded && bottomTab === 'table' ? 'var(--ink-0)' : 'var(--hairline)',
-                color: isTableExpanded && bottomTab === 'table' ? 'var(--ink-0)' : 'var(--ink-1)',
-              }}
-            >
-              Borrower Ledger Table
-            </button>
-          </div>
-
-          {isTableExpanded && (
-            <button
-              onClick={() => setIsTableExpanded(false)}
-              className="btn-ghost"
-              style={{
-                fontSize: '11px',
-                height: '24px',
-                color: 'var(--ink-2)',
-              }}
-              title="Collapse bottom table drawer"
-            >
-              Collapse ✕
-            </button>
-          )}
-        </div>
-
-        {/* Expandable Table Container */}
-        {isTableExpanded && (
+        );
+      case 'system':
+        return <SystemPage />;
+      case '404':
+        return (
           <div
             style={{
-              maxHeight: '260px',
-              overflowY: 'auto',
-              borderTop: '1px solid var(--hairline)',
-              backgroundColor: 'var(--surface-1)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+              gap: 'var(--space-16)',
+              color: 'var(--ink-0)',
+              fontFamily: 'var(--font-body)',
+              textAlign: 'center',
+              padding: 'var(--space-24)',
             }}
           >
-            {bottomTab === 'matrix' ? (
-              <WardHeatMatrix
-                wardAggregates={currentWardAggregates}
-                selectedWardId={selectedWardId}
-                onSelectWard={wId => setSelectedWardId(wId)}
-              />
-            ) : (
-              <AccessibleBorrowerTable
-                borrowers={portfolio.borrowers}
-                centres={portfolio.centres}
-                wards={portfolio.wards}
-                jlgs={portfolio.jlgs}
-                snapshots={currentWeekSnapshots}
-                selectedBorrowerId={urlState.borrowerId}
-                onSelectBorrower={id => setBorrowerId(id)}
-              />
-            )}
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '32px', fontWeight: 700 }}>404</div>
+            <div style={{ color: 'var(--ink-1)', fontSize: '14px' }}>Route not found</div>
+            <div style={{ color: 'var(--ink-2)', fontSize: '12px' }}>
+              Available routes: /queue · /network · /portfolio · /system
+            </div>
+            <button className="btn-primary" onClick={() => setRoute('network')}>
+              Return to Network
+            </button>
           </div>
-        )}
-      </footer>
+        );
+      default:
+        return (
+          <NetworkPage
+            portfolio={portfolio}
+            currentWeekSnapshots={currentWeekSnapshots}
+            currentTransientMetric={currentTransientMetric}
+            weeklyStressScores={weeklyStressScores}
+            currentWeek={urlState.week}
+            onWeekChange={setWeek}
+            selectedBorrowerId={urlState.borrowerId}
+            onSelectBorrower={setBorrowerId}
+            activeShock={activeShock}
+            activeIntervention={activeIntervention}
+            onApplyShock={handleApplyShock}
+            onClearShock={handleClearShock}
+            onApplyPolicyPreset={handleApplyPolicyPreset}
+            onApplyIntervention={intv => setActiveIntervention(intv)}
+            isFirstVisit={isNetworkFirstVisit}
+            onBootComplete={handleBootComplete}
+          />
+        );
+    }
+  };
 
-      {/* 6. MODAL: Intervention Trajectory Simulator (z-index 60) */}
-      {isInterventionModalOpen && selectedBorrower && (
-        <InterventionSimulator
-          wards={portfolio.wards}
-          officers={portfolio.officers}
-          centres={portfolio.centres}
-          jlgs={portfolio.jlgs}
-          borrowers={portfolio.borrowers}
-          edges={portfolio.edges}
-          activeShock={activeShock}
-          targetBorrower={selectedBorrower}
-          currentWeek={urlState.week}
-          onApplyIntervention={intv => {
-            setActiveIntervention(intv);
-            setIsInterventionModalOpen(false);
-          }}
-          onClose={() => setIsInterventionModalOpen(false)}
-        />
-      )}
+  return (
+    <div className="cockpit-container">
+      <TopBar
+        seed={urlState.seed}
+        onCycleSeed={() => setSeed(urlState.seed === 481516 ? 928374 : 481516)}
+        onDemoShortcut={handleDemoShortcut}
+        selectedBorrower={selectedBorrower}
+        selectedCentre={selectedCentre}
+        selectedWard={selectedWard}
+        selectedJlg={selectedJlg}
+        selectedSnapshot={selectedSnapshot}
+        currentWeek={urlState.week}
+        activeRoute={urlState.route}
+        portfolioStats={{
+          wards: portfolio.wards.length,
+          centres: portfolio.centres.length,
+          borrowers: portfolio.borrowers.length,
+        }}
+      />
+
+      <RouteNav
+        activeRoute={urlState.route}
+        onRouteChange={setRoute}
+      />
+
+      {/* Route content area with 280ms transition per §4.1 */}
+      <div style={{ flex: 1, minHeight: 0, overflow: urlState.route === 'system' ? 'auto' : 'hidden' }}>
+        <div key={urlState.route} className="route-enter" style={{ height: '100%' }}>
+          {renderRoute()}
+        </div>
+      </div>
+
+      {/* Guided first-look tour per §4.3 (one-time in-memory, suppressed on restored URL state) */}
+      <GuidedTour
+        isActive={tourActive && urlState.route === 'network'}
+        onDismiss={() => setTourActive(false)}
+      />
     </div>
   );
 };

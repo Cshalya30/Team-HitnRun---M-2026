@@ -146,7 +146,7 @@ export const ShockInjectionPanel: React.FC<ShockInjectionPanelProps> = ({
         >
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 600, color: 'var(--induced)' }}>
-              ⚡ Policy: 60+ DPD Cutoff
+              Policy: 60+ DPD Cutoff
             </div>
             <div style={{ fontSize: '11px', color: 'var(--ink-2)', marginTop: '2px' }}>
               Guardrails freeze · 2nd-order liquidity crunch

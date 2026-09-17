@@ -33,10 +33,39 @@ const OCCUPATIONS = [
 ];
 
 const WARD_CONFIGS = [
-  { id: 'w-01', name: 'Ward 4 · Dharavi East', district: 'Mumbai Central', lat: 19.0435, lng: 72.8562, riskFactor: 1.15 },
-  { id: 'w-02', name: 'Ward 7 · Kurla West', district: 'Mumbai Suburban', lat: 19.0688, lng: 72.8795, riskFactor: 0.95 },
-  { id: 'w-03', name: 'Ward 11 · Govandi North', district: 'Mumbai Suburban', lat: 19.0560, lng: 72.9180, riskFactor: 1.25 },
-  { id: 'w-04', name: 'Ward 15 · Chembur South', district: 'Mumbai Central', lat: 19.0340, lng: 72.9020, riskFactor: 0.85 },
+  // Mumbai Central (10 wards)
+  { id: 'w-01', name: 'Ward 1 · Colaba', district: 'Mumbai Central', lat: 18.9067, lng: 72.8147, riskFactor: 0.80 },
+  { id: 'w-02', name: 'Ward 2 · Fort', district: 'Mumbai Central', lat: 18.9338, lng: 72.8350, riskFactor: 0.85 },
+  { id: 'w-03', name: 'Ward 3 · Byculla', district: 'Mumbai Central', lat: 18.9774, lng: 72.8327, riskFactor: 1.10 },
+  { id: 'w-04', name: 'Ward 4 · Dharavi East', district: 'Mumbai Central', lat: 19.0435, lng: 72.8562, riskFactor: 1.25 },
+  { id: 'w-05', name: 'Ward 5 · Worli', district: 'Mumbai Central', lat: 19.0166, lng: 72.8166, riskFactor: 0.90 },
+  { id: 'w-06', name: 'Ward 6 · Dadar', district: 'Mumbai Central', lat: 19.0192, lng: 72.8427, riskFactor: 0.95 },
+  { id: 'w-07', name: 'Ward 7 · Parel', district: 'Mumbai Central', lat: 18.9950, lng: 72.8397, riskFactor: 1.05 },
+  { id: 'w-08', name: 'Ward 8 · Matunga', district: 'Mumbai Central', lat: 19.0263, lng: 72.8517, riskFactor: 0.85 },
+  { id: 'w-09', name: 'Ward 9 · Sion', district: 'Mumbai Central', lat: 19.0390, lng: 72.8619, riskFactor: 1.15 },
+  { id: 'w-10', name: 'Ward 10 · Mahim', district: 'Mumbai Central', lat: 19.0407, lng: 72.8431, riskFactor: 1.00 },
+  // Mumbai Suburban (10 wards)
+  { id: 'w-11', name: 'Ward 11 · Bandra West', district: 'Mumbai Suburban', lat: 19.0596, lng: 72.8295, riskFactor: 0.80 },
+  { id: 'w-12', name: 'Ward 12 · Kurla West', district: 'Mumbai Suburban', lat: 19.0688, lng: 72.8795, riskFactor: 1.20 },
+  { id: 'w-13', name: 'Ward 13 · Santacruz East', district: 'Mumbai Suburban', lat: 19.0805, lng: 72.8533, riskFactor: 0.95 },
+  { id: 'w-14', name: 'Ward 14 · Andheri East', district: 'Mumbai Suburban', lat: 19.1136, lng: 72.8697, riskFactor: 1.05 },
+  { id: 'w-15', name: 'Ward 15 · Govandi North', district: 'Mumbai Suburban', lat: 19.0560, lng: 72.9180, riskFactor: 1.30 },
+  { id: 'w-16', name: 'Ward 16 · Vile Parle', district: 'Mumbai Suburban', lat: 19.1001, lng: 72.8431, riskFactor: 0.85 },
+  { id: 'w-17', name: 'Ward 17 · Malad West', district: 'Mumbai Suburban', lat: 19.1866, lng: 72.8485, riskFactor: 1.10 },
+  { id: 'w-18', name: 'Ward 18 · Borivali East', district: 'Mumbai Suburban', lat: 19.2294, lng: 72.8660, riskFactor: 0.90 },
+  { id: 'w-19', name: 'Ward 19 · Ghatkopar', district: 'Mumbai Suburban', lat: 19.0867, lng: 72.9081, riskFactor: 1.00 },
+  { id: 'w-20', name: 'Ward 20 · Mulund West', district: 'Mumbai Suburban', lat: 19.1720, lng: 72.9464, riskFactor: 0.95 },
+  // Thane (10 wards)
+  { id: 'w-21', name: 'Ward 21 · Thane West', district: 'Thane', lat: 19.2084, lng: 72.9734, riskFactor: 1.00 },
+  { id: 'w-22', name: 'Ward 22 · Kopri', district: 'Thane', lat: 19.1864, lng: 72.9749, riskFactor: 1.05 },
+  { id: 'w-23', name: 'Ward 23 · Naupada', district: 'Thane', lat: 19.1874, lng: 72.9754, riskFactor: 0.90 },
+  { id: 'w-24', name: 'Ward 24 · Majiwada', district: 'Thane', lat: 19.2155, lng: 72.9789, riskFactor: 1.15 },
+  { id: 'w-25', name: 'Ward 25 · Vartak Nagar', district: 'Thane', lat: 19.2064, lng: 72.9575, riskFactor: 1.10 },
+  { id: 'w-26', name: 'Ward 26 · Kalwa', district: 'Thane', lat: 19.2001, lng: 72.9975, riskFactor: 1.25 },
+  { id: 'w-27', name: 'Ward 27 · Mumbra', district: 'Thane', lat: 19.1726, lng: 73.0232, riskFactor: 1.30 },
+  { id: 'w-28', name: 'Ward 28 · Diva', district: 'Thane', lat: 19.1867, lng: 73.0425, riskFactor: 1.25 },
+  { id: 'w-29', name: 'Ward 29 · Manpada', district: 'Thane', lat: 19.2312, lng: 72.9691, riskFactor: 0.95 },
+  { id: 'w-30', name: 'Ward 30 · Shilphata', district: 'Thane', lat: 19.1352, lng: 73.0401, riskFactor: 1.20 },
 ];
 
 const OFFICER_NAMES = [
@@ -48,6 +77,18 @@ const OFFICER_NAMES = [
   'Kavita B. (Officer 106)',
   'Rajesh S. (Officer 107)',
   'Priya M. (Officer 108)',
+  'Sanjay D. (Officer 109)',
+  'Rekha L. (Officer 110)',
+  'Amit R. (Officer 111)',
+  'Sunita G. (Officer 112)',
+  'Vikram C. (Officer 113)',
+  'Pooja K. (Officer 114)',
+  'Rahul M. (Officer 115)',
+  'Neha S. (Officer 116)',
+  'Vijay B. (Officer 117)',
+  'Sneha P. (Officer 118)',
+  'Arun V. (Officer 119)',
+  'Geeta T. (Officer 120)',
 ];
 
 export interface GeneratedPortfolio {
@@ -79,13 +120,14 @@ export function generateSyntheticPortfolio(seed = 481516): GeneratedPortfolio {
     assignedCentreIds: [],
   }));
 
-  // 3. Centres (24 centres across 4 wards = 6 centres per ward)
+  // 3. Centres (approx 5-7 centres per ward)
   const centres: Centre[] = [];
   let centreCounter = 1;
 
   for (let wIdx = 0; wIdx < wards.length; wIdx++) {
     const ward = wards[wIdx];
-    for (let c = 0; c < 6; c++) {
+    const numCentres = rng.intBetween(5, 7);
+    for (let c = 0; c < numCentres; c++) {
       const cId = `c-${String(centreCounter).padStart(2, '0')}`;
       // Distribute officers across centres (each officer has ~3 centres)
       const officerIdx = (centreCounter - 1) % officers.length;
@@ -104,13 +146,13 @@ export function generateSyntheticPortfolio(seed = 481516): GeneratedPortfolio {
     }
   }
 
-  // 4. JLGs (Joint Liability Groups, 3 to 4 groups per centre, ~80 groups total)
+  // 4. JLGs (Joint Liability Groups, 5 to 7 groups per centre)
   const jlgs: JLG[] = [];
   let jlgCounter = 1;
 
   for (let cIdx = 0; cIdx < centres.length; cIdx++) {
     const centre = centres[cIdx];
-    const groupCount = rng.intBetween(3, 4);
+    const groupCount = rng.intBetween(5, 7);
 
     for (let g = 0; g < groupCount; g++) {
       const jlgId = `jlg-${String(jlgCounter).padStart(3, '0')}`;

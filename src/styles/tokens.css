@@ -1,27 +1,27 @@
 @import "tailwindcss";
 
 :root {
-  /* PART 3 — Color Surfaces */
+  /* PART 3: Color Surfaces */
   --surface-0: #0B0D12; /* page background */
   --surface-1: #12151D; /* panels, cards, graph canvas background */
   --surface-2: #1A1F2B; /* raised / hover / active row */
   --surface-3: #232939; /* popovers, dropdown menus, tooltips (one step above panels) */
-  --hairline: #242B3A;  /* 1px borders, dividers — never 2px */
+  --hairline: #242B3A;  /* 1px borders, dividers - never 2px */
 
   /* Inks */
   --ink-0: #EAEDF5;     /* primary text, primary numerals */
   --ink-1: #A7AFC2;     /* secondary text, table body */
-  --ink-2: #6C7689;     /* tertiary — labels, timestamps, captions. NEVER body copy. */
+  --ink-2: #6C7689;     /* tertiary: labels, timestamps, captions. NEVER body copy. */
 
-  /* Stress Semantics — The only three accents that carry meaning. Never decorative. */
+  /* Stress Semantics: The only three accents that carry meaning. Never decorative. */
   --idio: #E8C468;      /* idiosyncratic (amber, circle ●) */
   --induced: #E05A6B;   /* induced / transmitted (red, triangle ▲) */
   --covariate: #4FA8D8; /* covariate / area-wide (blue, square ■) */
 
-  --signal: #7BE0B0;    /* positive — recovered, prevented, success */
+  --signal: #7BE0B0;    /* positive: recovered, prevented, success */
   --warn: #E8C468;      /* reuse --idio for warning-level status */
   --danger: #E05A6B;    /* reuse --induced for critical status */
-  --focus: #8B7CFF;     /* focus ring and text-selection ONLY — never button or brand */
+  --focus: var(--ink-0);     /* focus ring and text-selection ONLY: never button or brand */
 
   /* Opacity Scale */
   --op-disabled: 0.4;
@@ -64,6 +64,48 @@
   --motion-panel: 180ms cubic-bezier(0.16, 1, 0.3, 1);
   --motion-view: 280ms cubic-bezier(0.16, 1, 0.3, 1);
   --motion-node: 400ms ease-out;
+}
+
+[data-theme="light"] {
+  --surface-0: #F7F7FA;
+  --surface-1: #FFFFFF;
+  --surface-2: #EEEFF4;
+  --surface-3: #E4E5EC;
+  --hairline: #DDDFE7;
+
+  --ink-0: #14161C;
+  --ink-1: #4A4F5C;
+  --ink-2: #7B8194;
+
+  --idio: #9A6B14;
+  --induced: #B0243A;
+  --covariate: #1E6E96;
+  --signal: #147A52;
+  --warn: #9A6B14;
+  --danger: #B0243A;
+  --focus: var(--ink-0);
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --surface-0: #F7F7FA;
+    --surface-1: #FFFFFF;
+    --surface-2: #EEEFF4;
+    --surface-3: #E4E5EC;
+    --hairline: #DDDFE7;
+
+    --ink-0: #14161C;
+    --ink-1: #4A4F5C;
+    --ink-2: #7B8194;
+
+    --idio: #9A6B14;
+    --induced: #B0243A;
+    --covariate: #1E6E96;
+    --signal: #147A52;
+    --warn: #9A6B14;
+    --danger: #B0243A;
+    --focus: var(--ink-0);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -117,7 +159,7 @@ span[data-num] {
   padding: var(--space-16);
 }
 
-/* Button Variants (Part 4.6 — 3 variants only) */
+/* Button Variants (Part 4.6: 3 variants only) */
 /* 1. Primary: solid --surface-2 fill, --ink-0 text, used once per screen */
 .btn-primary {
   font-family: var(--font-body);
@@ -336,5 +378,84 @@ table.dense-table tr:hover td {
     overflow: visible !important;
     height: auto !important;
     padding: var(--space-12) var(--space-16);
+  }
+}
+
+/* Hover elevation: translateY(-2px) + soft shadow, 120ms */
+table.tremor-table tr,
+table.dense-table tr {
+  transition: transform 120ms cubic-bezier(.2,0,.4,1), box-shadow 120ms cubic-bezier(.2,0,.4,1);
+}
+
+table.tremor-table tbody tr:hover,
+table.dense-table tbody tr:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  table.tremor-table tr,
+  table.dense-table tr {
+    transition: none;
+  }
+  table.tremor-table tbody tr:hover,
+  table.dense-table tbody tr:hover {
+    transform: none;
+    box-shadow: none;
+  }
+}
+
+/* Route transition: 280ms cubic-bezier(.16,1,.3,1) per §4.1 */
+.route-enter {
+  animation: routeEnter 280ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes routeEnter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Boot sequence animations per §4.2 */
+.boot-topbar {
+  animation: bootFadeIn 120ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.boot-scrubber {
+  animation: bootScrubberSlide 180ms cubic-bezier(0.16, 1, 0.3, 1) 120ms both;
+}
+
+@keyframes bootFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes bootScrubberSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-enter,
+  .boot-topbar,
+  .boot-scrubber {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
 }

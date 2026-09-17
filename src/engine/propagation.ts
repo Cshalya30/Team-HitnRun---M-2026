@@ -408,6 +408,7 @@ export function simulatePortfolioContagion(
         totalBorrowers,
         flaggedCount: flagged.length,
         escalatedCount: escalated.length,
+        suppressedCount: flagged.length - escalated.length,
         avgLatentStress,
         contagionVelocity: flagged.length > 3 ? 1.4 : 0.8,
         dominantChannel: ward.id === 'w-03' ? 'ward' : 'guarantee',

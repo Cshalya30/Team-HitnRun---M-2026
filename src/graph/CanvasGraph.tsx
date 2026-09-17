@@ -1,5 +1,14 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
+  forceSimulation,
+  forceLink,
+  forceManyBody,
+  forceCenter,
+  forceCollide,
+  type SimulationNodeDatum,
+  type SimulationLinkDatum,
+} from 'd3-force';
+import {
   Borrower,
   Centre,
   Edge,
@@ -23,19 +32,28 @@ interface CanvasGraphProps {
   emptyFilterMessage?: string | null;
   onClearFilter?: () => void;
   currentWeek?: number;
+  /** When true, animate the force simulation live (boot sequence). */
+  showBootAnimation?: boolean;
+  /** Called when boot animation completes. */
+  onBootComplete?: () => void;
 }
 
-interface NodeLayout {
+interface ForceNode extends SimulationNodeDatum {
   id: string;
-  x: number;
-  y: number;
   borrower: Borrower;
+}
+
+interface ForceEdge extends SimulationLinkDatum<ForceNode> {
+  kind: Edge['kind'];
+  weight: number;
+  srcId: string;
+  dstId: string;
 }
 
 const COLOR_IDIO = '#E8C468';
 const COLOR_INDUCED = '#E05A6B';
 const COLOR_COVARIATE = '#4FA8D8';
-const COLOR_FOCUS = '#8B7CFF';
+const COLOR_FOCUS = '#EAEDF5'; // Neutral ink, NOT purple
 const COLOR_HAIRLINE = '#242B3A';
 
 export const CanvasGraph: React.FC<CanvasGraphProps> = ({
@@ -53,6 +71,8 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
   emptyFilterMessage = null,
   onClearFilter,
   currentWeek,
+  showBootAnimation = false,
+  onBootComplete,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -62,96 +82,197 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
   const dragStartRef = useRef({ x: 0, y: 0 });
   const hasUserPannedOrZoomed = useRef(false);
 
-  const nodesRef = useRef<Map<string, NodeLayout>>(new Map());
-  const boundsRef = useRef({ minX: 0, minY: 0, maxX: 1200, maxY: 800 });
-  const edgeListRef = useRef<Array<{ src: NodeLayout; dst: NodeLayout; kind: Edge['kind']; weight: number }>>([]);
+  const nodesRef = useRef<ForceNode[]>([]);
+  const nodeMapRef = useRef<Map<string, ForceNode>>(new Map());
+  const edgeListRef = useRef<ForceEdge[]>([]);
+  const simulationRef = useRef<ReturnType<typeof forceSimulation<ForceNode>> | null>(null);
+  const [simulationSettled, setSimulationSettled] = useState(false);
+  const bootPhaseRef = useRef<'idle' | 'running' | 'done'>('idle');
+  const bootStartTimeRef = useRef<number | null>(null);
 
   const [hoveredNode, setHoveredNode] = useState<{
-    node: NodeLayout;
+    node: ForceNode;
     screenX: number;
     screenY: number;
     snapshot: StressSnapshot;
   } | null>(null);
 
-  // 1. Data-bound Node Layout Generation (425 distinct nodes in cluster topology)
+  // Build force simulation from data
   useEffect(() => {
-    const nodeMap = new Map<string, NodeLayout>();
+    const container = containerRef.current;
+    if (!container || borrowers.length === 0) return;
 
-    // Space wards evenly in 2x2 quadrants to fill canvas viewport naturally
-    const wardCenters: Record<string, { cx: number; cy: number }> = {
-      'w-01': { cx: 320, cy: 240 }, // Dharavi East (Top-Left)
-      'w-02': { cx: 880, cy: 240 }, // Kurla West (Top-Right)
-      'w-03': { cx: 320, cy: 620 }, // Govandi North (Bottom-Left)
-      'w-04': { cx: 880, cy: 620 }, // Chembur South (Bottom-Right)
-    };
+    const rect = container.getBoundingClientRect();
+    const width = rect.width || 800;
+    const height = rect.height || 600;
 
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    // Create force nodes
+    const nodes: ForceNode[] = borrowers.map(b => ({
+      id: b.id,
+      borrower: b,
+      x: undefined,
+      y: undefined,
+    }));
 
-    wards.forEach(ward => {
-      const wCenter = wardCenters[ward.id] || { cx: 600, cy: 400 };
-      const wardCentres = centres.filter(c => c.wardId === ward.id);
+    const nodeMap = new Map<string, ForceNode>();
+    for (const n of nodes) {
+      nodeMap.set(n.id, n);
+    }
 
-      wardCentres.forEach((centre, cIdx) => {
-        // Distribute 6 centres in an ellipse around ward center
-        const cAngle = (cIdx / wardCentres.length) * Math.PI * 2 - Math.PI / 2;
-        const cX = wCenter.cx + Math.cos(cAngle) * 165;
-        const cY = wCenter.cy + Math.sin(cAngle) * 115;
-
-        const centreJlgs = jlgs.filter(j => j.centreId === centre.id);
-        centreJlgs.forEach((jlg, jIdx) => {
-          // Distribute JLGs around each centre
-          const jAngle = (jIdx / centreJlgs.length) * Math.PI * 2;
-          const jX = cX + Math.cos(jAngle) * 44;
-          const jY = cY + Math.sin(jAngle) * 44;
-
-          // 5 borrowers per JLG arranged in a distinct ring (radius 18px)
-          const members = borrowers.filter(b => b.jlgId === jlg.id);
-          members.forEach((borrower, mIdx) => {
-            const mAngle = (mIdx / members.length) * Math.PI * 2 - Math.PI / 2;
-            const bX = jX + Math.cos(mAngle) * 18;
-            const bY = jY + Math.sin(mAngle) * 18;
-
-            if (bX < minX) minX = bX;
-            if (bX > maxX) maxX = bX;
-            if (bY < minY) minY = bY;
-            if (bY > maxY) maxY = bY;
-
-            nodeMap.set(borrower.id, {
-              id: borrower.id,
-              x: bX,
-              y: bY,
-              borrower,
-            });
-          });
+    // Create force edges (only borrower-to-borrower edges)
+    const links: ForceEdge[] = [];
+    for (const e of edges) {
+      if (e.dstBorrowerId && nodeMap.has(e.srcBorrowerId) && nodeMap.has(e.dstBorrowerId)) {
+        links.push({
+          source: e.srcBorrowerId,
+          target: e.dstBorrowerId,
+          kind: e.kind,
+          weight: e.weight,
+          srcId: e.srcBorrowerId,
+          dstId: e.dstBorrowerId,
         });
-      });
-    });
+      }
+    }
 
-    nodesRef.current = nodeMap;
-    boundsRef.current = { minX, minY, maxX, maxY };
+    nodesRef.current = nodes;
+    nodeMapRef.current = nodeMap;
+    edgeListRef.current = links;
 
-    // Resolve Guarantee Edges
-    const resolvedEdges: Array<{ src: NodeLayout; dst: NodeLayout; kind: Edge['kind']; weight: number }> = [];
-    edges.forEach(e => {
-      if (e.dstBorrowerId) {
-        const src = nodeMap.get(e.srcBorrowerId);
-        const dst = nodeMap.get(e.dstBorrowerId);
-        if (src && dst) {
-          resolvedEdges.push({ src, dst, kind: e.kind, weight: e.weight });
+    // Stop any previous simulation
+    if (simulationRef.current) {
+      simulationRef.current.stop();
+    }
+
+    // Create d3-force simulation
+    const sim = forceSimulation<ForceNode>(nodes)
+      .force('link', forceLink<ForceNode, ForceEdge>(links)
+        .id(d => d.id)
+        .distance(24)
+        .strength(0.7))
+      .force('charge', forceManyBody<ForceNode>().strength(-40))
+      .force('center', forceCenter(width / 2, height / 2))
+      .force('collide', forceCollide<ForceNode>().radius(5));
+
+    simulationRef.current = sim;
+
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (prefersReducedMotion) {
+      sim.alpha(1).alphaDecay(0.02).stop();
+      for (let i = 0; i < 300; i++) {
+        sim.tick();
+        if (sim.alpha() < 0.001) break;
+      }
+      setSimulationSettled(true);
+      bootPhaseRef.current = 'done';
+      if (onBootComplete) onBootComplete();
+      return () => sim.stop();
+    }
+
+    let timer300: ReturnType<typeof setTimeout> | undefined;
+    let timer1100: ReturnType<typeof setTimeout> | undefined;
+    let timer1300: ReturnType<typeof setTimeout> | undefined;
+
+    if (showBootAnimation && bootPhaseRef.current === 'idle') {
+      bootStartTimeRef.current = performance.now();
+      bootPhaseRef.current = 'running';
+      setSimulationSettled(false);
+
+      // t=0-300ms: nodes positioned at canvas center
+      for (const n of nodes) {
+        n.x = width / 2;
+        n.y = height / 2;
+      }
+
+      sim.stop();
+
+      // t=300ms: simulation runs live
+      timer300 = setTimeout(() => {
+        sim.alpha(1).alphaDecay(0.018).restart();
+      }, 300);
+
+      // t=1100ms: simulation reaches resting alpha
+      timer1100 = setTimeout(() => {
+        sim.stop();
+      }, 1100);
+
+      // t=1300ms: boot complete
+      timer1300 = setTimeout(() => {
+        bootPhaseRef.current = 'done';
+        setSimulationSettled(true);
+        if (onBootComplete) onBootComplete();
+      }, 1300);
+    } else {
+      // Non-boot: run to convergence before first paint
+      sim.alpha(1).alphaDecay(0.02).stop();
+      for (let i = 0; i < 300; i++) {
+        sim.tick();
+        if (sim.alpha() < 0.001) break;
+      }
+      setSimulationSettled(true);
+      bootPhaseRef.current = 'done';
+    }
+
+    return () => {
+      sim.stop();
+      if (timer300) clearTimeout(timer300);
+      if (timer1100) clearTimeout(timer1100);
+      if (timer1300) clearTimeout(timer1300);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [borrowers, edges, showBootAnimation]);
+
+  // ResizeObserver: re-center forces on container resize
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        if (width <= 0 || height <= 0) continue;
+
+        const sim = simulationRef.current;
+        if (sim) {
+          // Update forceCenter to new dimensions
+          sim.force('center', forceCenter(width / 2, height / 2));
+          sim.alpha(0.3).restart();
+        }
+
+        // Auto-fit if user hasn't panned
+        if (!hasUserPannedOrZoomed.current) {
+          fitToViewport();
         }
       }
     });
-    edgeListRef.current = resolvedEdges;
-  }, [wards, centres, jlgs, borrowers, edges]);
 
-  // 2. Viewport Auto-Fitting (Part 4 of bugfix: 40px padding, no dead space)
+    observer.observe(container);
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Viewport auto-fitting
   const fitToViewport = useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
     const rect = container.getBoundingClientRect();
     if (rect.width <= 0 || rect.height <= 0) return;
 
-    const { minX, minY, maxX, maxY } = boundsRef.current;
+    const nodes = nodesRef.current;
+    if (nodes.length === 0) return;
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const n of nodes) {
+      const nx = n.x ?? 0;
+      const ny = n.y ?? 0;
+      if (nx < minX) minX = nx;
+      if (nx > maxX) maxX = nx;
+      if (ny < minY) minY = ny;
+      if (ny > maxY) maxY = ny;
+    }
+
     const contentW = maxX - minX;
     const contentH = maxY - minY;
     if (contentW <= 0 || contentH <= 0) return;
@@ -173,21 +294,22 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
     hasUserPannedOrZoomed.current = false;
   }, []);
 
-  // Auto-fit on initial mount, window resize, and when week changes (if not panned)
+  // Auto-fit once simulation settles
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fitToViewport();
-    }, 50);
-    return () => clearTimeout(timer);
-  }, [fitToViewport]);
+    if (simulationSettled && !hasUserPannedOrZoomed.current) {
+      const timer = setTimeout(fitToViewport, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [simulationSettled, fitToViewport]);
 
+  // Re-fit when week changes (if not manually panned)
   useEffect(() => {
-    if (!hasUserPannedOrZoomed.current) {
+    if (!hasUserPannedOrZoomed.current && simulationSettled) {
       fitToViewport();
     }
-  }, [currentWeek, fitToViewport]);
+  }, [currentWeek, fitToViewport, simulationSettled]);
 
-  // 3. Render Canvas (60fps, crisp DPI)
+  // Canvas render loop
   const renderCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -207,41 +329,92 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, width, height);
 
-    // Deep cockpit background: #12151D (--surface-1)
+    // Deep cockpit background: --surface-1
     ctx.fillStyle = '#12151D';
     ctx.fillRect(0, 0, width, height);
 
     ctx.translate(transform.x, transform.y);
     ctx.scale(transform.scale, transform.scale);
 
-    // 3.1 Guarantee Edges (Part 3: 8-15% default, 60%+ along selected borrower path)
     const allEdges = edgeListRef.current;
-    for (let i = 0; i < allEdges.length; i++) {
-      const { src, dst, kind } = allEdges[i];
-      const isConnectedToSelected = selectedBorrowerId && (src.id === selectedBorrowerId || dst.id === selectedBorrowerId);
+    const nodes = nodesRef.current;
 
-      ctx.beginPath();
-      ctx.moveTo(src.x, src.y);
-      ctx.lineTo(dst.x, dst.y);
-
-      if (isConnectedToSelected) {
-        // Boost opacity to 85%+ on edges connected to selected borrower
-        ctx.strokeStyle = 'rgba(234, 237, 245, 0.85)';
-        ctx.lineWidth = 1.75;
-      } else if (kind === 'guarantee') {
-        // Default guarantee edge: 12% opacity hairline
-        ctx.strokeStyle = 'rgba(167, 175, 194, 0.12)';
-        ctx.lineWidth = 1.0;
-      } else {
-        // Subtle income & social cross-group ties
-        ctx.strokeStyle = 'rgba(108, 118, 137, 0.04)';
-        ctx.lineWidth = 0.5;
+    // Build set of attribution-evidence edges for selected borrower
+    const attributionEdgeSet = new Set<string>();
+    if (selectedBorrowerId) {
+      const selectedSnap = currentWeekSnapshots.get(selectedBorrowerId);
+      if (selectedSnap && selectedSnap.sourceBorrowerId) {
+        // The direct transmission source is known evidence
+        attributionEdgeSet.add(`${selectedSnap.sourceBorrowerId}-${selectedBorrowerId}`);
+        attributionEdgeSet.add(`${selectedBorrowerId}-${selectedSnap.sourceBorrowerId}`);
       }
-      ctx.stroke();
+      // Also include all direct guarantee edges as attribution evidence
+      for (const e of allEdges) {
+        const srcId = typeof e.source === 'string' ? e.source : (e.source as ForceNode).id;
+        const tgtId = typeof e.target === 'string' ? e.target : (e.target as ForceNode).id;
+        if (e.kind === 'guarantee' && (srcId === selectedBorrowerId || tgtId === selectedBorrowerId)) {
+          attributionEdgeSet.add(`${srcId}-${tgtId}`);
+        }
+      }
     }
 
-    // 3.2 Borrowers (Part 2: 425 data-bound nodes, min radius 3px to 9px by stress, circle/triangle/square)
-    nodesRef.current.forEach(node => {
+    const isBooting = bootPhaseRef.current === 'running';
+    const elapsed = isBooting && bootStartTimeRef.current != null ? performance.now() - bootStartTimeRef.current : 9999;
+
+    if (isBooting && elapsed < 300) {
+      // t=0-300ms: blank canvas, nodes haven't spawned yet
+      ctx.restore();
+      return;
+    }
+
+    let edgeBaseOpacity = 0.10;
+    if (isBooting) {
+      if (elapsed < 1100) {
+        edgeBaseOpacity = 0;
+      } else if (elapsed < 1300) {
+        edgeBaseOpacity = ((elapsed - 1100) / 200) * 0.10;
+      } else {
+        edgeBaseOpacity = 0.10;
+      }
+    }
+
+    // Render edges
+    if (edgeBaseOpacity > 0 || selectedBorrowerId) {
+      for (let i = 0; i < allEdges.length; i++) {
+        const e = allEdges[i];
+        const src = e.source as ForceNode;
+        const dst = e.target as ForceNode;
+        if (src.x == null || src.y == null || dst.x == null || dst.y == null) continue;
+
+        ctx.beginPath();
+        ctx.moveTo(src.x, src.y);
+        ctx.lineTo(dst.x, dst.y);
+
+        if (selectedBorrowerId) {
+          // Selection mode: attribution edges at 70%, all others at 4%
+          const edgeKey = `${src.id}-${dst.id}`;
+          const edgeKeyReverse = `${dst.id}-${src.id}`;
+          if (attributionEdgeSet.has(edgeKey) || attributionEdgeSet.has(edgeKeyReverse)) {
+            ctx.strokeStyle = 'rgba(234, 237, 245, 0.70)';
+            ctx.lineWidth = 1.75;
+          } else {
+            ctx.strokeStyle = 'rgba(108, 118, 137, 0.04)';
+            ctx.lineWidth = 0.5;
+          }
+        } else {
+          // Default or boot fade-in
+          ctx.strokeStyle = `rgba(167, 175, 194, ${edgeBaseOpacity.toFixed(3)})`;
+          ctx.lineWidth = 1.0;
+        }
+        ctx.stroke();
+      }
+    }
+
+    // Render nodes
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i];
+      if (node.x == null || node.y == null) continue;
+
       const snapshot = currentWeekSnapshots.get(node.id);
       const isSelected = node.id === selectedBorrowerId;
       const isOrigin = node.id === cascadeOriginBorrowerId;
@@ -251,7 +424,7 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
       const shareInduced = snapshot?.shareInduced ?? 0.0;
       const shareCov = snapshot?.shareCovariate ?? 0.15;
 
-      // Determine Dominant Shape
+      // Determine dominant type
       let dominantType: 'idio' | 'induced' | 'covariate' = 'idio';
       if (shareInduced > shareIdio && shareInduced > shareCov) {
         dominantType = 'induced';
@@ -259,10 +432,10 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
         dominantType = 'covariate';
       }
 
-      // Radius: strictly minimum 3px, scaled up to 9px by latent stress
+      // Radius: 3px minimum, scaled up to 9px by latent stress
       const r = Math.max(3, Math.min(9, 3 + stress * 6));
 
-      // Semantic Color Selection
+      // Semantic colour
       let color = COLOR_IDIO;
       if (dominantType === 'induced') color = COLOR_INDUCED;
       else if (dominantType === 'covariate') color = COLOR_COVARIATE;
@@ -272,22 +445,22 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
 
       ctx.beginPath();
       if (dominantType === 'induced') {
-        // Equilateral triangle (▲)
+        // Equilateral triangle
         const h = r * 1.35;
         ctx.moveTo(0, -h);
         ctx.lineTo(h * 0.95, h * 0.65);
         ctx.lineTo(-h * 0.95, h * 0.65);
         ctx.closePath();
       } else if (dominantType === 'covariate') {
-        // Rounded square (■)
+        // Rounded square
         const s = r * 1.5;
         ctx.rect(-s / 2, -s / 2, s, s);
       } else {
-        // Circle (●)
+        // Circle
         ctx.arc(0, 0, r, 0, Math.PI * 2);
       }
 
-      // Fully visible node fill (minimum 0.55 opacity even when calm, 1.0 when stressed)
+      // Node fill
       const fillAlpha = Math.min(1.0, 0.55 + stress * 0.45);
       ctx.fillStyle = color;
       ctx.globalAlpha = fillAlpha;
@@ -299,7 +472,7 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
       ctx.lineWidth = 1;
       ctx.stroke();
 
-      // Selected Node: Persistent Ring in --focus (#8B7CFF), never a color change
+      // Selected node: neutral focus ring
       if (isSelected) {
         ctx.beginPath();
         ctx.arc(0, 0, r + 5, 0, Math.PI * 2);
@@ -308,7 +481,7 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
         ctx.stroke();
       }
 
-      // Cascade Origin Halo if applicable
+      // Cascade origin halo
       if (isOrigin) {
         ctx.beginPath();
         ctx.arc(0, 0, r + 7, 0, Math.PI * 2);
@@ -320,7 +493,7 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
       }
 
       ctx.restore();
-    });
+    }
 
     ctx.restore();
   }, [transform, currentWeekSnapshots, selectedBorrowerId, cascadeOriginBorrowerId]);
@@ -335,7 +508,7 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
     return () => cancelAnimationFrame(animId);
   }, [renderCanvas]);
 
-  // Pan and Zoom Interaction Handlers
+  // Pan and zoom interaction handlers
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (e.button === 0) {
       isDraggingRef.current = true;
@@ -361,10 +534,13 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
     const mouseCanvasX = (e.clientX - rect.left - transform.x) / transform.scale;
     const mouseCanvasY = (e.clientY - rect.top - transform.y) / transform.scale;
 
-    let found: NodeLayout | null = null;
+    let found: ForceNode | null = null;
     let minD2 = 256; // 16px hover radius
 
-    nodesRef.current.forEach(node => {
+    const nodes = nodesRef.current;
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i];
+      if (node.x == null || node.y == null) continue;
       const dx = node.x - mouseCanvasX;
       const dy = node.y - mouseCanvasY;
       const d2 = dx * dx + dy * dy;
@@ -372,10 +548,10 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
         minD2 = d2;
         found = node;
       }
-    });
+    }
 
     if (found) {
-      const snap = currentWeekSnapshots.get((found as NodeLayout).id);
+      const snap = currentWeekSnapshots.get(found.id);
       if (snap) {
         let screenX = e.clientX - rect.left + 16;
         let screenY = e.clientY - rect.top + 16;
@@ -425,10 +601,13 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
     const clickCanvasX = (e.clientX - rect.left - transform.x) / transform.scale;
     const clickCanvasY = (e.clientY - rect.top - transform.y) / transform.scale;
 
-    let closest: NodeLayout | null = null;
+    let closest: ForceNode | null = null;
     let minDistance = 256;
 
-    nodesRef.current.forEach(node => {
+    const nodes = nodesRef.current;
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i];
+      if (node.x == null || node.y == null) continue;
       const dx = node.x - clickCanvasX;
       const dy = node.y - clickCanvasY;
       const dist = dx * dx + dy * dy;
@@ -436,14 +615,14 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
         minDistance = dist;
         closest = node;
       }
-    });
+    }
 
     if (closest) {
-      onSelectBorrower((closest as NodeLayout).id);
+      onSelectBorrower(closest.id);
     }
   };
 
-  // State 1: Loading Skeleton (no shimmer)
+  // State 1: Loading skeleton (no shimmer)
   if (isLoading) {
     return (
       <div
@@ -452,7 +631,7 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
           width: '100%',
           height: '100%',
           backgroundColor: '#12151D',
-          borderRadius: 'var(--radius-table)',
+          borderRadius: 'var(--radius-panel)',
           border: '1px solid var(--hairline)',
           display: 'flex',
           alignItems: 'center',
@@ -466,54 +645,45 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
     );
   }
 
-  // State 2: Error State
+  // State 2: Error state
   if (hasError) {
     return (
       <div
+        ref={containerRef}
         style={{
           width: '100%',
           height: '100%',
           backgroundColor: '#12151D',
-          borderRadius: 'var(--radius-table)',
+          borderRadius: 'var(--radius-panel)',
           border: '1px solid var(--danger)',
           padding: 'var(--space-24)',
-          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 'var(--space-12)',
         }}
       >
-        <div style={{ color: 'var(--danger)', fontSize: '13px', fontWeight: 600, marginBottom: '8px' }}>
+        <div style={{ color: 'var(--danger)', fontSize: '13px', fontWeight: 600 }}>
           Canvas Initialization Failed
         </div>
-        <table className="dense-table" style={{ width: '100%' }}>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Borrower</th>
-              <th>Ward</th>
-            </tr>
-          </thead>
-          <tbody>
-            {borrowers.slice(0, 10).map(b => (
-              <tr key={b.id}>
-                <td>{b.id}</td>
-                <td>{b.displayName}</td>
-                <td>{b.wardId}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div style={{ color: 'var(--ink-1)', fontSize: '12px' }}>
+          The force simulation could not initialize with the current dataset.
+        </div>
       </div>
     );
   }
 
-  // State 3: Empty Filter State
+  // State 3: Empty filter
   if (emptyFilterMessage) {
     return (
       <div
+        ref={containerRef}
         style={{
           width: '100%',
           height: '100%',
           backgroundColor: '#12151D',
-          borderRadius: 'var(--radius-table)',
+          borderRadius: 'var(--radius-panel)',
           border: '1px solid var(--hairline)',
           display: 'flex',
           flexDirection: 'column',
@@ -532,7 +702,7 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
     );
   }
 
-  // State 4: Interactive Canvas Viewport
+  // State 4: Interactive canvas
   return (
     <div
       ref={containerRef}
@@ -541,7 +711,7 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
         width: '100%',
         height: '100%',
         overflow: 'hidden',
-        borderRadius: 'var(--radius-table)',
+        borderRadius: 'var(--radius-panel)',
         border: '1px solid var(--hairline)',
         backgroundColor: '#12151D',
       }}
@@ -561,7 +731,7 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
         }}
       />
 
-      {/* Top Left Legend & Reset View Control */}
+      {/* Top left legend and reset view control */}
       <div
         style={{
           position: 'absolute',
@@ -575,7 +745,7 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
           borderRadius: 'var(--radius-control)',
           border: '1px solid var(--hairline)',
           fontSize: '11px',
-          zIndex: 'var(--z-panel)' as any,
+          zIndex: 'var(--z-panel)' as unknown as number,
           userSelect: 'none',
         }}
       >
@@ -609,7 +779,7 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
         </button>
       </div>
 
-      {/* Hover Tooltip (z-index 40) */}
+      {/* Hover tooltip */}
       {hoveredNode && (
         <div
           style={{
@@ -623,7 +793,7 @@ export const CanvasGraph: React.FC<CanvasGraphProps> = ({
             padding: 'var(--space-8) var(--space-12)',
             fontSize: '11px',
             lineHeight: 1.4,
-            zIndex: 'var(--z-tooltip)' as any,
+            zIndex: 'var(--z-tooltip)' as unknown as number,
             boxShadow: 'rgba(0,0,0,0.2) 0px 2px 10px 0px',
           }}
         >

@@ -128,6 +128,7 @@ export interface WardAggregate {
   totalBorrowers: number;
   flaggedCount: number;
   escalatedCount: number;
+  suppressedCount: number;
   avgLatentStress: number;
   contagionVelocity: number; // week-over-week delta
   dominantChannel: EdgeKind;

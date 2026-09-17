@@ -111,8 +111,8 @@ export const TimelineSequencer: React.FC<TimelineSequencerProps> = ({
       setIsDragging(false);
       try {
         e.currentTarget.releasePointerCapture(e.pointerId);
-      } catch {
-        // pointer capture already released
+      } catch (err) {
+        console.warn('[TimeScrubber] Pointer capture release failed:', err);
       }
     }
   };

@@ -1,59 +1,60 @@
-# Tremor · Microfinance Group-Contagion Risk Diagnostic
+# Tremor
 
-> **Synthetic Data Declaration**: All data rendered in Tremor is 100% synthetically generated via a deterministic pseudo-random generator (`mulberry32`). No real personally identifiable information (PII), borrower records, or proprietary financial histories exist anywhere in this repository or its client bundles.
+Group-level risk diagnostic for microfinance lenders.
 
-Tremor is a group-level contagion risk diagnostic tool for microfinance institutions (MFIs) operating joint-liability groups (JLGs). It separates a borrower's own financial distress (idiosyncratic shock) from distress transmitted to her by peers through group mutual guarantee edges (induced contagion) or ward-wide macroeconomic shocks (covariate), presenting loan officers and branch managers with actionable causal attribution.
+Tremor separates a borrower's own financial stress from stress transmitted to her by her lending group, and shows a loan officer which one they are looking at, with a named source and a confidence band, not just an alert. All data is simulated and seed-generated, calibrated to roughly 5,000 borrowers across 30 wards and 3 districts over 78 weeks of history, aligning with baseline PAR 31-180 near 2% and stress-period PAR near 6.2% from published MFIN Micrometer and RBI Financial Stability Report figures. Results validate recovery of a known generative process, not real-world predictive accuracy.
 
----
+Built for Manipal Hackathon 2026, Problem Statement P11 (Microfinance, SDG 8).
 
-## Explicitly Out of Scope
+## The problem
 
-As mandated in the specification:
-1. **No credit scoring or underwriting**: Tremor does not issue approve/reject decisions or credit scores.
-2. **No collections or recovery workflow**: There is no recovery escalation tooling, agent commission tracking, or borrower-facing portal.
-3. **No real PII**: All names, centres, wards, and rupee denominations are synthetically calibrated.
-4. **No native mobile app**: Responsive web application tested down to 380px viewports.
-5. **No user-generated content**: No uploads, comments, free-form rich text, or unauthenticated writes.
+In a joint liability group, when one borrower cannot pay her instalment, her groupmates cover it for her. The lender's system records a clean repayment. The distress moved to four other households, and nothing in a standard credit system recorded it. By the time it surfaces as a missed payment, it usually belongs to someone other than the person whose crisis started it.
 
----
+Tremor models the borrower relationship graph, the ways stress moves along it, and runs a three-way causal attribution on every flagged borrower: is this her own shock, is it transmitted from a named groupmate, or is her whole area under stress. Each answer needs a different response, and treating one as the other either wastes an intervention or misses the actual cause.
 
-## Named Design Decision: Asymmetric Causal Diagnostics
+## What this is not
 
-Generated software almost uniformly presents symmetrical 3x3 grids or equal 50/50 dashboard columns. Tremor deliberately breaks symmetry by allocating **62% of the viewport to the dynamic contagion canvas** and **38% to the three-way causal attribution rail**. 
+- Not a credit scoring or underwriting tool
+- Not a collections system
+- Has no borrower-facing surface of any kind, by design
 
-This reflects operator reality: loan officers scanning a 400-borrower portfolio need spatial context of group clusters (wards and centres) while simultaneously inspecting per-borrower counterfactual ablation without leaving the visual canvas. Every numeral is set in tabular monospace (`JetBrains Mono`) to eliminate digit jitter during cascade playback.
+## Data and Calibration
 
----
+Every borrower, loan, and repayment record in this build is synthetic, simulated, and seed-generated. No real personal or financial data is used anywhere. The generator is calibrated so baseline PAR 31-180 sits near 2% and stress-period PAR near 6.2%, matching published MFIN Micrometer and RBI Financial Stability Report data, with household obligation ratios capped at 50% and a maximum of three active lenders per borrower. Results are validated as recovering a known, labelled generative process, not as real-world predictive accuracy, which would require a pilot against a real lender's data.
 
-## Anti-Slop Engineering Standards & Guarantees
+## Architecture
 
-This Tier 1 build strictly complies with the **Anti-Slop Engineering Standard**:
-- **Static Client-Side Runtime**: Zero backend, zero database, zero authentication, zero API keys. Eliminates OWASP Top 10 injection and secret leakage risks by design.
-- **Deterministic Simulation**: Byte-identical execution across machines and reloads for any given seed (default: `481516`).
-- **60fps Canvas Visualizer**: High-DPI HTML5 canvas rendering 400+ nodes with 12ms staggered cascade lighting along propagation paths.
-- **Strict Design Tokens**: Zero arbitrary Tailwind values; strictly derived palette (`--surface-0`, `--surface-1`, `--hairline`, and 3 non-decorative semantic accents: `--idio`, `--induced`, `--covariate`).
-- **Four-State Data Lifecycle**: Every data component handles loaded, loading skeleton, empty, and error states.
-- **URL Query Persistence**: `?week=...&borrower=...&scenario=...&seed=...` persists across reloads and browser navigation.
-- **Full Keyboard Accessibility**: Complete demo path navigable via `Tab`, `ArrowKeys`, and `Enter`, with visible `--focus` styling.
+Four routes over one shared dataset and one shared component library:
 
----
+| Route | For | Shows |
+|---|---|---|
+| `/queue` | Loan officer | Ranked worklist of borrowers needing a conversation this week |
+| `/network` | Analyst | The borrower graph, scrubber, scenario injection, attribution panel |
+| `/portfolio` | Branch manager, risk officer | Ward-level exposure, trend, and a policy sandbox |
+| `/system` | Everyone | How the model works: five contagion channels and the attribution method |
 
-## Quickstart
+- **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, d3-force for the live borrower physics graph.
+- **Simulation engine**: Pure TypeScript, deterministic and seeded. Generates the portfolio, computes latent stress from eight signals, propagates it across relationship channels, and attributes flagged stress across idiosyncratic, induced, and covariate causes using counterfactual edge ablation with Monte Carlo confidence bands.
+- **Backend for this submission**: None. Static client-side app, no database, no API keys, no auth.
+
+## Running locally
 
 ```bash
-# 1. Install dependencies
+git clone https://github.com/Cshalya30/Team-HitnRun---M-2026.git
+cd Team-HitnRun---M-2026
 npm install
-
-# 2. Run local development server
 npm run dev
-
-# 3. Build for production (verifies TypeScript types & generates static bundle)
-npm run build
 ```
 
-## Security Headers (`vercel.json`)
-The production build ships with strict host security headers:
-- `Content-Security-Policy`: Disallows unsafe external scripts, inline object execution, and enforces strict origin bounds.
-- `X-Content-Type-Options`: `nosniff`
-- `X-Frame-Options`: `DENY`
-- `Referrer-Policy`: `strict-origin-when-cross-origin`
+## Pre-submission Quality Checklist
+
+- Four distinct client-side routes sharing one component library
+- Live d3-force simulation responding to measured container dimensions and ResizeObserver
+- Three visible counts in Ward Exposure Matrix: FLAGGED, ESCALATED, SUPPRESSED
+- Zero purple or violet accent hues; neutral ink focus rings throughout
+- No emoji icons, no gradients, no glassmorphism
+- 100% deterministic execution for any seed
+
+## License
+
+MIT, see [LICENSE](LICENSE).

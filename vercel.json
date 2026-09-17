@@ -25,5 +25,12 @@
         }
       ]
     }
+  ],
+  "rewrites": [
+    { "source": "/queue", "destination": "/index.html" },
+    { "source": "/network", "destination": "/index.html" },
+    { "source": "/portfolio", "destination": "/index.html" },
+    { "source": "/system", "destination": "/index.html" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
