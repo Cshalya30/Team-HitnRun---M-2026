@@ -169,7 +169,7 @@ export const AccessibleBorrowerTable: React.FC<AccessibleBorrowerTableProps> = (
         </div>
       </div>
 
-      <div style={{ maxHeight: '240px', overflowY: 'auto' }}>
+      <div style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}>
         <table className="dense-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead style={{ position: 'sticky', top: 0, zIndex: 'var(--z-sticky)' as any }}>
             <tr style={{ height: '32px' }}>

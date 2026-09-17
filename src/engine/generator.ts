@@ -32,40 +32,40 @@ const OCCUPATIONS = [
   'Beauty Parlour / Henna Artist',
 ];
 
-const WARD_CONFIGS = [
-  // Mumbai Central (10 wards)
-  { id: 'w-01', name: 'Ward 1 · Colaba', district: 'Mumbai Central', lat: 18.9067, lng: 72.8147, riskFactor: 0.80 },
-  { id: 'w-02', name: 'Ward 2 · Fort', district: 'Mumbai Central', lat: 18.9338, lng: 72.8350, riskFactor: 0.85 },
-  { id: 'w-03', name: 'Ward 3 · Byculla', district: 'Mumbai Central', lat: 18.9774, lng: 72.8327, riskFactor: 1.10 },
-  { id: 'w-04', name: 'Ward 4 · Dharavi East', district: 'Mumbai Central', lat: 19.0435, lng: 72.8562, riskFactor: 1.25 },
-  { id: 'w-05', name: 'Ward 5 · Worli', district: 'Mumbai Central', lat: 19.0166, lng: 72.8166, riskFactor: 0.90 },
-  { id: 'w-06', name: 'Ward 6 · Dadar', district: 'Mumbai Central', lat: 19.0192, lng: 72.8427, riskFactor: 0.95 },
-  { id: 'w-07', name: 'Ward 7 · Parel', district: 'Mumbai Central', lat: 18.9950, lng: 72.8397, riskFactor: 1.05 },
-  { id: 'w-08', name: 'Ward 8 · Matunga', district: 'Mumbai Central', lat: 19.0263, lng: 72.8517, riskFactor: 0.85 },
-  { id: 'w-09', name: 'Ward 9 · Sion', district: 'Mumbai Central', lat: 19.0390, lng: 72.8619, riskFactor: 1.15 },
-  { id: 'w-10', name: 'Ward 10 · Mahim', district: 'Mumbai Central', lat: 19.0407, lng: 72.8431, riskFactor: 1.00 },
-  // Mumbai Suburban (10 wards)
-  { id: 'w-11', name: 'Ward 11 · Bandra West', district: 'Mumbai Suburban', lat: 19.0596, lng: 72.8295, riskFactor: 0.80 },
-  { id: 'w-12', name: 'Ward 12 · Kurla West', district: 'Mumbai Suburban', lat: 19.0688, lng: 72.8795, riskFactor: 1.20 },
-  { id: 'w-13', name: 'Ward 13 · Santacruz East', district: 'Mumbai Suburban', lat: 19.0805, lng: 72.8533, riskFactor: 0.95 },
+export const WARD_CONFIGS = [
+  // Mumbai Central (10 wards) - Diverse profiles from commercial/affluent to dense informal hubs
+  { id: 'w-01', name: 'Ward 1 · Colaba', district: 'Mumbai Central', lat: 18.9067, lng: 72.8147, riskFactor: 0.50 },
+  { id: 'w-02', name: 'Ward 2 · Fort', district: 'Mumbai Central', lat: 18.9338, lng: 72.8350, riskFactor: 0.55 },
+  { id: 'w-03', name: 'Ward 3 · Byculla', district: 'Mumbai Central', lat: 18.9774, lng: 72.8327, riskFactor: 1.15 },
+  { id: 'w-04', name: 'Ward 4 · Dharavi East', district: 'Mumbai Central', lat: 19.0435, lng: 72.8562, riskFactor: 1.65 },
+  { id: 'w-05', name: 'Ward 5 · Worli', district: 'Mumbai Central', lat: 19.0166, lng: 72.8166, riskFactor: 0.65 },
+  { id: 'w-06', name: 'Ward 6 · Dadar', district: 'Mumbai Central', lat: 19.0192, lng: 72.8427, riskFactor: 0.85 },
+  { id: 'w-07', name: 'Ward 7 · Parel', district: 'Mumbai Central', lat: 18.9950, lng: 72.8397, riskFactor: 0.95 },
+  { id: 'w-08', name: 'Ward 8 · Matunga', district: 'Mumbai Central', lat: 19.0263, lng: 72.8517, riskFactor: 0.60 },
+  { id: 'w-09', name: 'Ward 9 · Sion', district: 'Mumbai Central', lat: 19.0390, lng: 72.8619, riskFactor: 1.25 },
+  { id: 'w-10', name: 'Ward 10 · Mahim', district: 'Mumbai Central', lat: 19.0407, lng: 72.8431, riskFactor: 0.90 },
+  // Mumbai Suburban (10 wards) - High variance from coastal residential to low-lying flood-prone corridors
+  { id: 'w-11', name: 'Ward 11 · Bandra West', district: 'Mumbai Suburban', lat: 19.0596, lng: 72.8295, riskFactor: 0.45 },
+  { id: 'w-12', name: 'Ward 12 · Kurla West', district: 'Mumbai Suburban', lat: 19.0688, lng: 72.8795, riskFactor: 1.55 },
+  { id: 'w-13', name: 'Ward 13 · Santacruz East', district: 'Mumbai Suburban', lat: 19.0805, lng: 72.8533, riskFactor: 0.80 },
   { id: 'w-14', name: 'Ward 14 · Andheri East', district: 'Mumbai Suburban', lat: 19.1136, lng: 72.8697, riskFactor: 1.05 },
-  { id: 'w-15', name: 'Ward 15 · Govandi North', district: 'Mumbai Suburban', lat: 19.0560, lng: 72.9180, riskFactor: 1.30 },
-  { id: 'w-16', name: 'Ward 16 · Vile Parle', district: 'Mumbai Suburban', lat: 19.1001, lng: 72.8431, riskFactor: 0.85 },
-  { id: 'w-17', name: 'Ward 17 · Malad West', district: 'Mumbai Suburban', lat: 19.1866, lng: 72.8485, riskFactor: 1.10 },
-  { id: 'w-18', name: 'Ward 18 · Borivali East', district: 'Mumbai Suburban', lat: 19.2294, lng: 72.8660, riskFactor: 0.90 },
-  { id: 'w-19', name: 'Ward 19 · Ghatkopar', district: 'Mumbai Suburban', lat: 19.0867, lng: 72.9081, riskFactor: 1.00 },
-  { id: 'w-20', name: 'Ward 20 · Mulund West', district: 'Mumbai Suburban', lat: 19.1720, lng: 72.9464, riskFactor: 0.95 },
-  // Thane (10 wards)
-  { id: 'w-21', name: 'Ward 21 · Thane West', district: 'Thane', lat: 19.2084, lng: 72.9734, riskFactor: 1.00 },
-  { id: 'w-22', name: 'Ward 22 · Kopri', district: 'Thane', lat: 19.1864, lng: 72.9749, riskFactor: 1.05 },
-  { id: 'w-23', name: 'Ward 23 · Naupada', district: 'Thane', lat: 19.1874, lng: 72.9754, riskFactor: 0.90 },
-  { id: 'w-24', name: 'Ward 24 · Majiwada', district: 'Thane', lat: 19.2155, lng: 72.9789, riskFactor: 1.15 },
+  { id: 'w-15', name: 'Ward 15 · Govandi North', district: 'Mumbai Suburban', lat: 19.0560, lng: 72.9180, riskFactor: 1.75 },
+  { id: 'w-16', name: 'Ward 16 · Vile Parle', district: 'Mumbai Suburban', lat: 19.1001, lng: 72.8431, riskFactor: 0.55 },
+  { id: 'w-17', name: 'Ward 17 · Malad West', district: 'Mumbai Suburban', lat: 19.1866, lng: 72.8485, riskFactor: 1.20 },
+  { id: 'w-18', name: 'Ward 18 · Borivali East', district: 'Mumbai Suburban', lat: 19.2294, lng: 72.8660, riskFactor: 0.70 },
+  { id: 'w-19', name: 'Ward 19 · Ghatkopar', district: 'Mumbai Suburban', lat: 19.0867, lng: 72.9081, riskFactor: 0.90 },
+  { id: 'w-20', name: 'Ward 20 · Mulund West', district: 'Mumbai Suburban', lat: 19.1720, lng: 72.9464, riskFactor: 0.75 },
+  // Thane (10 wards) - Industrial manufacturing, commuter towns & peri-urban markets
+  { id: 'w-21', name: 'Ward 21 · Thane West', district: 'Thane', lat: 19.2084, lng: 72.9734, riskFactor: 0.85 },
+  { id: 'w-22', name: 'Ward 22 · Kopri', district: 'Thane', lat: 19.1864, lng: 72.9749, riskFactor: 1.00 },
+  { id: 'w-23', name: 'Ward 23 · Naupada', district: 'Thane', lat: 19.1874, lng: 72.9754, riskFactor: 0.60 },
+  { id: 'w-24', name: 'Ward 24 · Majiwada', district: 'Thane', lat: 19.2155, lng: 72.9789, riskFactor: 1.30 },
   { id: 'w-25', name: 'Ward 25 · Vartak Nagar', district: 'Thane', lat: 19.2064, lng: 72.9575, riskFactor: 1.10 },
-  { id: 'w-26', name: 'Ward 26 · Kalwa', district: 'Thane', lat: 19.2001, lng: 72.9975, riskFactor: 1.25 },
-  { id: 'w-27', name: 'Ward 27 · Mumbra', district: 'Thane', lat: 19.1726, lng: 73.0232, riskFactor: 1.30 },
-  { id: 'w-28', name: 'Ward 28 · Diva', district: 'Thane', lat: 19.1867, lng: 73.0425, riskFactor: 1.25 },
-  { id: 'w-29', name: 'Ward 29 · Manpada', district: 'Thane', lat: 19.2312, lng: 72.9691, riskFactor: 0.95 },
-  { id: 'w-30', name: 'Ward 30 · Shilphata', district: 'Thane', lat: 19.1352, lng: 73.0401, riskFactor: 1.20 },
+  { id: 'w-26', name: 'Ward 26 · Kalwa', district: 'Thane', lat: 19.2001, lng: 72.9975, riskFactor: 1.45 },
+  { id: 'w-27', name: 'Ward 27 · Mumbra', district: 'Thane', lat: 19.1726, lng: 73.0232, riskFactor: 1.70 },
+  { id: 'w-28', name: 'Ward 28 · Diva', district: 'Thane', lat: 19.1867, lng: 73.0425, riskFactor: 1.50 },
+  { id: 'w-29', name: 'Ward 29 · Manpada', district: 'Thane', lat: 19.2312, lng: 72.9691, riskFactor: 0.75 },
+  { id: 'w-30', name: 'Ward 30 · Shilphata', district: 'Thane', lat: 19.1352, lng: 73.0401, riskFactor: 1.40 },
 ];
 
 const OFFICER_NAMES = [
@@ -102,7 +102,7 @@ export interface GeneratedPortfolio {
 }
 
 /**
- * Deterministically generates a synthetic microfinance portfolio.
+ * Deterministically generates a synthetic microfinance portfolio with rich realistic demographic and economic variance.
  * Guarantees identical output for any given seed.
  */
 export function generateSyntheticPortfolio(seed = 481516): GeneratedPortfolio {
@@ -129,7 +129,7 @@ export function generateSyntheticPortfolio(seed = 481516): GeneratedPortfolio {
     const numCentres = rng.intBetween(5, 7);
     for (let c = 0; c < numCentres; c++) {
       const cId = `c-${String(centreCounter).padStart(2, '0')}`;
-      // Distribute officers across centres (each officer has ~3 centres)
+      // Distribute officers across centres
       const officerIdx = (centreCounter - 1) % officers.length;
       const officer = officers[officerIdx];
       officer.assignedCentreIds.push(cId);
@@ -168,7 +168,7 @@ export function generateSyntheticPortfolio(seed = 481516): GeneratedPortfolio {
     }
   }
 
-  // 5. Borrowers (5 members per JLG = ~400 borrowers total)
+  // 5. Borrowers (5 members per JLG)
   const borrowers: Borrower[] = [];
   let borrowerCounter = 1;
 
@@ -189,16 +189,22 @@ export function generateSyntheticPortfolio(seed = 481516): GeneratedPortfolio {
       }
       const occupation = rng.pickOne(OCCUPATIONS);
 
+      // Realistic demographic distributions based on ward economic profile
       const loanCycle = rng.intBetween(1, 5);
-      const basePrincipal = 25000 + (loanCycle - 1) * 12000;
-      const principal = basePrincipal + rng.intBetween(0, 4) * 2000;
+      const basePrincipal = 20000 + (loanCycle - 1) * 11000;
+      const principal = basePrincipal + rng.intBetween(0, 5) * 2500;
+      
       // Weekly EMI based on 52-week tenure at ~22% declining APR
       const weeklyEmi = Math.round((principal * 1.18) / 52);
-      const hhIncome = rng.intBetween(14000, 34000);
-      const activeLenders = rng.next() > 0.82 ? rng.intBetween(2, 3) : 1;
+      const hhIncome = rng.intBetween(12000, 42000);
+      
+      // Multi-lender exposure varies by ward risk profile
+      const multiLenderChance = 0.15 * ward.riskFactor;
+      const activeLenders = rng.next() < multiLenderChance ? rng.intBetween(2, 3) : 1;
 
-      // Base latent stress baseline (calm healthy level 0.04 - 0.18)
-      const baselineStress = Math.round((0.04 + rng.next() * 0.12 * ward.riskFactor) * 1000) / 1000;
+      // Realistic spread of baseline latent stress (0.02 to 0.32)
+      const baseComponent = 0.02 + rng.next() * 0.14 * ward.riskFactor;
+      const baselineStress = Math.round(Math.min(0.32, Math.max(0.02, baseComponent)) * 1000) / 1000;
 
       const borrower: Borrower = {
         id: bId,
@@ -233,8 +239,8 @@ export function generateSyntheticPortfolio(seed = 481516): GeneratedPortfolio {
 
     for (let i = 0; i < members.length; i++) {
       for (let j = i + 1; j < members.length; j++) {
-        // High transmission weight: 0.70 to 0.92
-        const weight = Math.round((0.70 + rng.next() * 0.22) * 1000) / 1000;
+        // Guarantee transmission weight: 0.65 to 0.95
+        const weight = Math.round((0.65 + rng.next() * 0.30) * 1000) / 1000;
         edges.push({
           id: `e-${edgeCounter++}`,
           kind: 'guarantee',
@@ -243,7 +249,6 @@ export function generateSyntheticPortfolio(seed = 481516): GeneratedPortfolio {
           dstEntityId: null,
           weight,
         });
-        // Symmetrical guarantee
         edges.push({
           id: `e-${edgeCounter++}`,
           kind: 'guarantee',
@@ -266,7 +271,7 @@ export function generateSyntheticPortfolio(seed = 481516): GeneratedPortfolio {
         const b1 = centreBorrowers[i];
         const b2 = centreBorrowers[j];
         if (b1.jlgId !== b2.jlgId && b1.occupation === b2.occupation) {
-          const weight = Math.round((0.35 + rng.next() * 0.25) * 1000) / 1000;
+          const weight = Math.round((0.35 + rng.next() * 0.30) * 1000) / 1000;
           edges.push({
             id: `e-${edgeCounter++}`,
             kind: 'income',
@@ -284,14 +289,14 @@ export function generateSyntheticPortfolio(seed = 481516): GeneratedPortfolio {
   for (let cIdx = 0; cIdx < centres.length; cIdx++) {
     const centre = centres[cIdx];
     const centreBorrowers = borrowers.filter(b => b.centreId === centre.id);
-    const socialPairs = rng.intBetween(2, 4);
+    const socialPairs = rng.intBetween(3, 6);
 
     for (let p = 0; p < socialPairs; p++) {
       const b1 = rng.pickOne(centreBorrowers);
       const eligible = centreBorrowers.filter(b => b.jlgId !== b1.jlgId && b.id !== b1.id);
       if (eligible.length > 0) {
         const b2 = rng.pickOne(eligible);
-        const weight = Math.round((0.28 + rng.next() * 0.22) * 1000) / 1000;
+        const weight = Math.round((0.30 + rng.next() * 0.30) * 1000) / 1000;
         edges.push({
           id: `e-${edgeCounter++}`,
           kind: 'social',

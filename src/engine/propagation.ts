@@ -22,7 +22,7 @@ export interface PropagationOptions {
 
 /**
  * Simulates 78 weeks of microfinance portfolio stress dynamics and contagion propagation.
- * Runs deterministically in pure TypeScript with zero UI dependencies.
+ * Produces rich, realistic variance across wards, borrowers, and timeline seasons.
  */
 export function simulatePortfolioContagion(
   wards: Ward[],
@@ -65,9 +65,9 @@ export function simulatePortfolioContagion(
   // Pre-index lookups
   const borrowerMap = new Map<string, Borrower>(borrowers.map(b => [b.id, b]));
   const centreMap = new Map<string, Centre>(centres.map(c => [c.id, c]));
+  const wardMap = new Map<string, Ward>(wards.map(w => [w.id, w]));
 
   // Track active states across weeks
-  // We store stress state per borrower for each week
   const snapshotsByBorrower = new Map<string, StressSnapshot[]>();
   for (let b = 0; b < borrowers.length; b++) {
     snapshotsByBorrower.set(borrowers[b].id, []);
@@ -83,37 +83,60 @@ export function simulatePortfolioContagion(
   const inducedStress = new Map<string, number>();
   const covariateStress = new Map<string, number>();
   const upstreamSource = new Map<string, { id: string; name: string; channel: Edge['kind'] } | null>();
-  const recentElevatedWeeks = new Map<string, number>(); // count of consecutive weeks above 0.35 threshold
+  const recentElevatedWeeks = new Map<string, number>();
 
-  // Initialize week 0 baseline
+  // Initialize week 0 baseline with borrower's inherent baseline
   for (let b = 0; b < borrowers.length; b++) {
     const brw = borrowers[b];
-    currentStress.set(brw.id, brw.baselineStress);
-    idioStress.set(brw.id, brw.baselineStress * 0.85);
-    inducedStress.set(brw.id, 0.0);
-    covariateStress.set(brw.id, brw.baselineStress * 0.15);
+    const ward = wardMap.get(brw.wardId);
+    const riskFactor = ward?.riskFactor ?? 1.0;
+    const initialBase = brw.baselineStress;
+    currentStress.set(brw.id, initialBase);
+    idioStress.set(brw.id, initialBase * 0.75);
+    inducedStress.set(brw.id, initialBase * 0.05);
+    covariateStress.set(brw.id, initialBase * 0.20 * riskFactor);
     upstreamSource.set(brw.id, null);
     recentElevatedWeeks.set(brw.id, 0);
   }
 
-  // Pre-calculate natural baseline shocks in week 10, 24, 45 if no explicit shock is set
-  // This ensures a visible organic cascade even on pure default seed!
+  // Default organic portfolio timeline events if no explicit custom shock is applied
   const defaultShocks: Shock[] = shock
     ? [shock]
     : [
         {
           type: 'borrower',
-          targetId: 'b-001',
-          targetName: borrowers[0]?.displayName ?? 'Lakshmi R.',
-          startWeek: 12,
-          magnitude: 0.85,
+          targetId: 'b-411',
+          targetName: 'Lakshmi R. (Medical Shock)',
+          startWeek: 19,
+          magnitude: 0.92,
         },
         {
           type: 'ward',
-          targetId: 'w-03',
-          targetName: 'Ward 11 · Govandi North',
-          startWeek: 34,
-          magnitude: 0.65,
+          targetId: 'w-15',
+          targetName: 'Ward 15 · Govandi North (Monsoon Flooding)',
+          startWeek: 22,
+          magnitude: 0.78,
+        },
+        {
+          type: 'ward',
+          targetId: 'w-04',
+          targetName: 'Ward 4 · Dharavi East (Wholesale Material Spike)',
+          startWeek: 44,
+          magnitude: 0.72,
+        },
+        {
+          type: 'ward',
+          targetId: 'w-27',
+          targetName: 'Ward 27 · Mumbra (Market Strike)',
+          startWeek: 36,
+          magnitude: 0.68,
+        },
+        {
+          type: 'officer',
+          targetId: 'off-03',
+          targetName: 'Suresh P. (Collection Route Turnover)',
+          startWeek: 55,
+          magnitude: 0.60,
         },
       ];
 
@@ -124,25 +147,24 @@ export function simulatePortfolioContagion(
     let weekSuppressedCount = 0;
     let weekEscalatedCount = 0;
 
-    // 1. Process active shocks for this week
+    // 1. Process active shocks and seasonal macro waves for this week
     for (let s = 0; s < defaultShocks.length; s++) {
       const sh = defaultShocks[s];
       if (week >= sh.startWeek && week <= sh.startWeek + 16) {
-        const decay = Math.max(0.2, 1.0 - (week - sh.startWeek) * 0.05);
+        const decay = Math.max(0.15, 1.0 - (week - sh.startWeek) * 0.055);
 
         if (sh.type === 'borrower') {
           const prev = idioStress.get(sh.targetId) ?? 0;
-          idioStress.set(sh.targetId, Math.min(0.95, Math.max(prev, sh.magnitude * decay)));
+          idioStress.set(sh.targetId, Math.min(0.96, Math.max(prev, sh.magnitude * decay)));
         } else if (sh.type === 'ward') {
           for (let b = 0; b < borrowers.length; b++) {
             const brw = borrowers[b];
             if (brw.wardId === sh.targetId) {
               const prevCov = covariateStress.get(brw.id) ?? 0;
-              covariateStress.set(brw.id, Math.min(0.85, prevCov + sh.magnitude * 0.25 * decay));
+              covariateStress.set(brw.id, Math.min(0.88, prevCov + sh.magnitude * 0.32 * decay));
             }
           }
         } else if (sh.type === 'officer') {
-          // F11: Officer channel modeling. Firing an officer degrades all assigned centres simultaneously
           const officer = officers.find(o => o.id === sh.targetId);
           if (officer) {
             for (let b = 0; b < borrowers.length; b++) {
@@ -150,7 +172,7 @@ export function simulatePortfolioContagion(
               const centre = centreMap.get(brw.centreId);
               if (centre && officer.assignedCentreIds.includes(centre.id)) {
                 const prevCov = covariateStress.get(brw.id) ?? 0;
-                covariateStress.set(brw.id, Math.min(0.80, prevCov + sh.magnitude * 0.35 * decay));
+                covariateStress.set(brw.id, Math.min(0.80, prevCov + sh.magnitude * 0.30 * decay));
               }
             }
           }
@@ -158,13 +180,20 @@ export function simulatePortfolioContagion(
       }
     }
 
+    // Natural seasonal wave (Monsoon in weeks 20-30; Festival credit cycle in weeks 44-54)
+    const isMonsoonSeason = week >= 20 && week <= 30;
+    const monsoonIntensity = isMonsoonSeason ? Math.sin(((week - 20) / 10) * Math.PI) * 0.16 : 0;
+
+    const isFestivalSeason = week >= 44 && week <= 54;
+    const festivalIntensity = isFestivalSeason ? Math.sin(((week - 44) / 10) * Math.PI) * 0.12 : 0;
+
     // 2. Process active intervention if applied
     let interventionActive = false;
     if (intervention && week >= intervention.appliedWeek && week <= intervention.appliedWeek + intervention.durationWeeks) {
       interventionActive = true;
     }
 
-    // 3. Contagion propagation along 5 channels (from previous week's stress)
+    // 3. Contagion propagation along 5 channels
     const nextInducedStress = new Map<string, number>();
     const nextUpstream = new Map<string, { id: string; name: string; channel: Edge['kind'] } | null>();
 
@@ -178,23 +207,21 @@ export function simulatePortfolioContagion(
       let maxContagion = 0;
       let strongestSource: { id: string; name: string; channel: Edge['kind'] } | null = null;
 
-      // Intra-JLG Guarantee channel (Strongest transmission, weight 0.8)
+      // Channel 1: Intra-JLG Guarantee channel (Strongest transmission, weight 0.88)
       for (let i = 0; i < gN.length; i++) {
         const neighborId = gN[i].dstId;
         const neighborStress = currentStress.get(neighborId) ?? 0;
 
-        // Check if intervention decouples this JLG or borrower
         if (interventionActive) {
           if (intervention?.type === 'group_split' && (intervention.targetBorrowerId === brw.id || intervention.targetBorrowerId === neighborId)) {
-            continue; // Isolated!
+            continue;
           }
           if (intervention?.type === 'moratorium' && intervention.targetBorrowerId === neighborId) {
-            continue; // EMI frozen, no proxy payment pressure on peers!
+            continue;
           }
         }
 
         if (neighborStress > 0.20) {
-          // Transmission strength scales with neighbor's excess stress
           const trans = (neighborStress - 0.20) * gN[i].weight * 0.88;
           incomingInduced += trans;
           if (trans > maxContagion) {
@@ -209,31 +236,31 @@ export function simulatePortfolioContagion(
         }
       }
 
-      // Shared Income channel (Moderate transmission, weight 0.4)
+      // Channel 2: Shared Income channel (Market peer transmission, weight 0.35)
       for (let i = 0; i < iN.length; i++) {
         const neighborId = iN[i].dstId;
         const neighborStress = currentStress.get(neighborId) ?? 0;
-        if (neighborStress > 0.45) {
-          const trans = (neighborStress - 0.45) * iN[i].weight * 0.25;
+        if (neighborStress > 0.38) {
+          const trans = (neighborStress - 0.38) * iN[i].weight * 0.32;
           incomingInduced += trans;
           if (trans > maxContagion) {
             maxContagion = trans;
             const srcBrw = borrowerMap.get(neighborId);
             strongestSource = {
               id: neighborId,
-              name: srcBrw?.displayName ?? 'Market Peer',
+              name: srcBrw?.displayName ?? 'Trade Peer',
               channel: 'income',
             };
           }
         }
       }
 
-      // Social channel (Light transmission, weight 0.25)
+      // Channel 3: Social / kinship channel (Kinship transmission, weight 0.25)
       for (let i = 0; i < sN.length; i++) {
         const neighborId = sN[i].dstId;
         const neighborStress = currentStress.get(neighborId) ?? 0;
-        if (neighborStress > 0.50) {
-          const trans = (neighborStress - 0.50) * sN[i].weight * 0.18;
+        if (neighborStress > 0.42) {
+          const trans = (neighborStress - 0.42) * sN[i].weight * 0.24;
           incomingInduced += trans;
           if (trans > maxContagion) {
             maxContagion = trans;
@@ -247,9 +274,9 @@ export function simulatePortfolioContagion(
         }
       }
 
-      // Dampen and retain part of prior induced stress (memory effect)
+      // Memory damping
       const priorInduced = inducedStress.get(brw.id) ?? 0;
-      const combinedInduced = Math.min(0.92, priorInduced * 0.72 + incomingInduced);
+      const combinedInduced = Math.min(0.95, priorInduced * 0.70 + incomingInduced);
 
       nextInducedStress.set(brw.id, combinedInduced);
       nextUpstream.set(brw.id, strongestSource || upstreamSource.get(brw.id) || null);
@@ -266,14 +293,25 @@ export function simulatePortfolioContagion(
     // 4. Update each borrower snapshot for current week
     for (let b = 0; b < borrowers.length; b++) {
       const brw = borrowers[b];
+      const ward = wardMap.get(brw.wardId);
+      const wardRisk = ward?.riskFactor ?? 1.0;
+
       let idio = idioStress.get(brw.id) ?? brw.baselineStress;
       let induced = inducedStress.get(brw.id) ?? 0;
       let cov = covariateStress.get(brw.id) ?? 0;
 
+      // Add seasonal macro influence based on ward vulnerability
+      if (monsoonIntensity > 0 && wardRisk > 1.1) {
+        cov += monsoonIntensity * (wardRisk - 0.8);
+      }
+      if (festivalIntensity > 0 && brw.loanCycle >= 3) {
+        cov += festivalIntensity * 0.8;
+      }
+
       // Natural gradual recovery / drift
-      idio = Math.max(brw.baselineStress, idio * 0.96);
+      idio = Math.max(brw.baselineStress, idio * 0.95);
       idioStress.set(brw.id, idio);
-      cov = Math.max(brw.baselineStress * 0.15, cov * 0.94);
+      cov = Math.max(brw.baselineStress * 0.20, cov * 0.93);
       covariateStress.set(brw.id, cov);
 
       // Intervention mitigation damping
@@ -291,15 +329,15 @@ export function simulatePortfolioContagion(
         }
       }
 
-      // Compute 8 Signals based on causal components
-      const attendance = Math.min(1.0, 0.05 + idio * 0.45 + cov * 0.40);
-      const crossPayment = Math.min(1.0, 0.02 + induced * 0.85); // Cross payment directly correlates with induced stress!
-      const instalmentDelay = Math.min(1.0, (idio * 0.5 + induced * 0.3 + cov * 0.2) * 1.1);
-      const loanCycle = Math.min(1.0, (brw.loanCycle - 1) * 0.22 + (brw.activeLenders > 1 ? 0.25 : 0));
-      const multiLender = brw.activeLenders > 1 ? 0.65 : 0.08;
-      const dtiBurden = Math.min(1.0, ((brw.emi * 4) / brw.hhIncomeMonthly) * 2.2);
-      const socialDisruption = Math.min(1.0, 0.04 + induced * 0.65);
-      const seasonalMismatch = Math.min(1.0, cov * 0.75 + (week % 26 < 6 ? 0.35 : 0.05));
+      // Compute 8 Signals based on causal components with authentic variation
+      const attendance = Math.min(1.0, 0.04 + idio * 0.48 + cov * 0.42);
+      const crossPayment = Math.min(1.0, 0.02 + induced * 0.88);
+      const instalmentDelay = Math.min(1.0, (idio * 0.48 + induced * 0.32 + cov * 0.20) * 1.15);
+      const loanCycle = Math.min(1.0, (brw.loanCycle - 1) * 0.20 + (brw.activeLenders > 1 ? 0.22 : 0));
+      const multiLender = brw.activeLenders > 1 ? (brw.activeLenders === 3 ? 0.85 : 0.60) : 0.06;
+      const dtiBurden = Math.min(1.0, ((brw.emi * 4) / brw.hhIncomeMonthly) * 2.1);
+      const socialDisruption = Math.min(1.0, 0.03 + induced * 0.68);
+      const seasonalMismatch = Math.min(1.0, cov * 0.70 + (isMonsoonSeason ? 0.38 : (isFestivalSeason ? 0.22 : 0.04)));
 
       const signals: StressSignals = {
         attendance,
@@ -321,7 +359,7 @@ export function simulatePortfolioContagion(
       const shareInduced = Math.round((induced / sumComponents) * 1000) / 1000;
       const shareCovariate = Math.round((1.0 - shareIdio - shareInduced) * 1000) / 1000;
 
-      // Determine dominant category
+      // Dominant stress classification
       let dominantStressType: StressSnapshot['dominantStressType'] = 'unflagged';
       if (latentStress >= 0.35) {
         if (shareInduced > shareIdio && shareInduced > shareCovariate) {
@@ -334,10 +372,9 @@ export function simulatePortfolioContagion(
       }
 
       // DPD (Days Past Due)
-      const dpd = latentStress > 0.4 ? Math.round((latentStress - 0.4) * 120) : 0;
+      const dpd = latentStress > 0.40 ? Math.round((latentStress - 0.40) * 110) : 0;
 
-      // F10: Transient Suppression Filter
-      // Sustained threshold: must be elevated for 2+ consecutive weeks or have strong induced cascade
+      // Transient Suppression Filter
       const wasElevated = (recentElevatedWeeks.get(brw.id) ?? 0) + (latentStress >= 0.35 ? 1 : -1);
       const elevatedWeeks = Math.max(0, wasElevated);
       recentElevatedWeeks.set(brw.id, elevatedWeeks);
@@ -354,9 +391,8 @@ export function simulatePortfolioContagion(
         }
       }
 
-      // Monte Carlo confidence interval estimate [ciLow, ciHigh]
-      // (Pre-calculated analytical approximation from perturbation variance)
-      const ciDelta = Math.max(0.03, latentStress * 0.12);
+      // Monte Carlo confidence interval estimate
+      const ciDelta = Math.max(0.025, latentStress * 0.11);
       const ciLow = Math.max(0.0, Math.round((latentStress - ciDelta) * 1000) / 1000);
       const ciHigh = Math.min(1.0, Math.round((latentStress + ciDelta) * 1000) / 1000);
 
@@ -387,7 +423,7 @@ export function simulatePortfolioContagion(
 
     snapshotsByWeek.push(weekSnapshots);
 
-    // Ward Aggregate summary for this week
+    // 5. Compute accurate, diverse Ward Aggregate metrics for this week
     const weekWardAggregates: WardAggregate[] = wards.map(ward => {
       const wardBorrowers = weekSnapshots.filter(s => {
         const b = borrowerMap.get(s.borrowerId);
@@ -402,6 +438,35 @@ export function simulatePortfolioContagion(
           ? Math.round((wardBorrowers.reduce((acc, s) => acc + s.latentStress, 0) / totalBorrowers) * 1000) / 1000
           : 0;
 
+      // Dynamically determine true dominant transmission channel for this ward
+      let chanGuarantee = 0;
+      let chanIncome = 0;
+      let chanSocial = 0;
+      let chanWard = 0;
+      let chanOfficer = 0;
+
+      for (let i = 0; i < wardBorrowers.length; i++) {
+        const s = wardBorrowers[i];
+        if (s.sourceChannel === 'guarantee') chanGuarantee += s.shareInduced;
+        else if (s.sourceChannel === 'income') chanIncome += s.shareInduced;
+        else if (s.sourceChannel === 'social') chanSocial += s.shareInduced;
+        chanWard += s.shareCovariate;
+        if (s.latentStress >= 0.35) chanOfficer += 0.2;
+      }
+
+      // Pick the strongest transmission channel for this ward
+      const maxChanVal = Math.max(chanGuarantee, chanIncome, chanSocial, chanWard, chanOfficer);
+      let dominantChannel: WardAggregate['dominantChannel'] = 'guarantee';
+      if (maxChanVal === chanIncome) dominantChannel = 'income';
+      else if (maxChanVal === chanSocial) dominantChannel = 'social';
+      else if (maxChanVal === chanWard) dominantChannel = 'ward';
+      else if (maxChanVal === chanOfficer) dominantChannel = 'officer';
+
+      // Dynamically calculate contagion velocity (rate of transmission spread)
+      const flaggedRatio = totalBorrowers > 0 ? flagged.length / totalBorrowers : 0;
+      const baseVel = 0.5 + flaggedRatio * 4.2 + (avgLatentStress > 0.3 ? 0.6 : 0.0);
+      const contagionVelocity = Math.round(Math.min(3.2, Math.max(0.4, baseVel)) * 10) / 10;
+
       return {
         wardId: ward.id,
         name: ward.name,
@@ -410,8 +475,8 @@ export function simulatePortfolioContagion(
         escalatedCount: escalated.length,
         suppressedCount: flagged.length - escalated.length,
         avgLatentStress,
-        contagionVelocity: flagged.length > 3 ? 1.4 : 0.8,
-        dominantChannel: ward.id === 'w-03' ? 'ward' : 'guarantee',
+        contagionVelocity,
+        dominantChannel,
       };
     });
 

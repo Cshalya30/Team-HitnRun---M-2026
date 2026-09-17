@@ -13,7 +13,7 @@ interface PortfolioPageProps {
 export const PortfolioPage: React.FC<PortfolioPageProps> = ({ portfolio, simulation, currentWeek, onApplyPolicyPreset, activeShock }) => {
   const [selectedWardId, setSelectedWardId] = useState<string | null>(null);
 
-  // Generate sparkline data for each ward
+  // Generate sparkline data for each ward with rich dynamic scaling
   const sparklines = useMemo(() => {
     return portfolio.wards.map((ward, index) => {
       // Collect avgLatentStress over 78 weeks
@@ -30,17 +30,28 @@ export const PortfolioPage: React.FC<PortfolioPageProps> = ({ portfolio, simulat
         }
       }
 
-      // Build SVG polyline points string (scale to 140x36)
-      const maxStress = Math.max(...points, 0.01);
-      const pointsStr = points.map((val, idx) => {
+      const minVal = Math.min(...points);
+      const maxVal = Math.max(...points);
+      const range = Math.max(0.12, maxVal - minVal);
+      
+      // Build scaled polyline and area polygon points
+      const pointCoords = points.map((val, idx) => {
         const x = (idx / (numWeeks - 1)) * 140;
-        const y = 36 - (val / Math.max(maxStress, 0.5)) * 34 - 1;
-        return `${x.toFixed(1)},${y.toFixed(1)}`;
-      }).join(' ');
+        const normalized = (val - minVal) / range;
+        const y = 32 - normalized * 24 - 4;
+        return { x: Number(x.toFixed(1)), y: Number(y.toFixed(1)) };
+      });
 
-      const latestStress = points[Math.min(currentWeek - 1, points.length - 1)] || 0;
+      const pointsStr = pointCoords.map(p => `${p.x},${p.y}`).join(' ');
+      const areaStr = `0,36 ${pointsStr} 140,36`;
 
-      // Dominant channel color
+      // Current week marker point
+      const currentIdx = Math.min(numWeeks - 1, Math.max(0, currentWeek - 1));
+      const currentMarker = pointCoords[currentIdx] || { x: 0, y: 18 };
+
+      const latestStress = points[currentIdx] || 0;
+
+      // Channel color
       const colors = ['var(--idio)', 'var(--induced)', 'var(--covariate)', 'var(--signal)'];
       const color = colors[index % colors.length];
 
@@ -50,8 +61,12 @@ export const PortfolioPage: React.FC<PortfolioPageProps> = ({ portfolio, simulat
         district: ward.district,
         channelNum: `CH-${String(index + 1).padStart(2, '0')}`,
         pointsStr,
+        areaStr,
+        currentMarker,
         color,
         latestStress: (latestStress * 100).toFixed(1),
+        minStress: (minVal * 100).toFixed(0),
+        maxStress: (maxVal * 100).toFixed(0),
         isHighRisk: latestStress >= 0.35,
       };
     });
@@ -208,7 +223,7 @@ export const PortfolioPage: React.FC<PortfolioPageProps> = ({ portfolio, simulat
                   display: 'flex',
                   flexDirection: 'column',
                   gap: 'var(--space-6)',
-                  border: sp.isHighRisk ? '2px solid var(--induced)' : '2px solid var(--hairline)',
+                  border: sp.isHighRisk ? '2.5px solid var(--induced)' : '2px solid var(--hairline)',
                   padding: 'var(--space-10)',
                   backgroundColor: 'var(--surface-0)',
                   borderRadius: 'var(--radius-control)',
@@ -231,8 +246,8 @@ export const PortfolioPage: React.FC<PortfolioPageProps> = ({ portfolio, simulat
                     className="tabular-num"
                     style={{
                       fontFamily: 'var(--font-mono)',
-                      fontSize: '11px',
-                      fontWeight: 800,
+                      fontSize: '12px',
+                      fontWeight: 900,
                       color: sp.isHighRisk ? 'var(--induced)' : sp.color,
                     }}
                   >
@@ -243,7 +258,7 @@ export const PortfolioPage: React.FC<PortfolioPageProps> = ({ portfolio, simulat
                 <div
                   style={{
                     fontSize: '12px',
-                    fontWeight: 700,
+                    fontWeight: 800,
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -253,16 +268,36 @@ export const PortfolioPage: React.FC<PortfolioPageProps> = ({ portfolio, simulat
                   {sp.name}
                 </div>
 
-                <svg width="100%" height="36" viewBox="0 0 140 36" preserveAspectRatio="none" style={{ display: 'block', overflow: 'visible' }}>
-                  <polyline
-                    points={sp.pointsStr}
-                    fill="none"
-                    stroke={sp.color}
-                    strokeWidth="2.4"
-                    strokeLinejoin="round"
-                    strokeLinecap="round"
-                  />
-                </svg>
+                <div style={{ position: 'relative', width: '100%', height: '36px', marginTop: '2px' }}>
+                  <svg width="100%" height="36" viewBox="0 0 140 36" preserveAspectRatio="none" style={{ display: 'block', overflow: 'visible' }}>
+                    <polygon
+                      points={sp.areaStr}
+                      fill={sp.color}
+                      opacity="0.15"
+                    />
+                    <polyline
+                      points={sp.pointsStr}
+                      fill="none"
+                      stroke={sp.color}
+                      strokeWidth="2.4"
+                      strokeLinejoin="round"
+                      strokeLinecap="round"
+                    />
+                    <circle
+                      cx={sp.currentMarker.x}
+                      cy={sp.currentMarker.y}
+                      r="3.5"
+                      fill={sp.color}
+                      stroke="#000000"
+                      strokeWidth="1.5"
+                    />
+                  </svg>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', fontFamily: 'var(--font-mono)', color: 'var(--ink-2)', marginTop: '2px' }}>
+                  <span>MIN: {sp.minStress}%</span>
+                  <span>PEAK: {sp.maxStress}%</span>
+                </div>
               </div>
             ))}
           </div>
